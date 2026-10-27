@@ -32,11 +32,9 @@ namespace PolyhedronLab
 
         public static Matrix4x4 ScaleAboutCenter(Point3D c, double k)
         {
-            // ВАЖНО: для вектор-строк порядок именно такой (t1 * s * t2)!
-            // Сначала переносим в 0, затем масштабируем, затем возвращаем.
-            var t1 = Translate(-c.X, -c.Y, -c.Z);
-            var s = Scale(k, k, k);
-            var t2 = Translate(c.X, c.Y, c.Z);
+            var t1 = Translate(-c.X, -c.Y, -c.Z); // переносим центр в начало координат
+            var s = Scale(k, k, k); // масштабируем
+            var t2 = Translate(c.X, c.Y, c.Z); // переносим центр в изначальные координаты
             return t1 * s * t2;
         }
 
