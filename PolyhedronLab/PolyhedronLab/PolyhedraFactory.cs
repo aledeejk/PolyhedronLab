@@ -6,9 +6,6 @@ namespace PolyhedronLab
 {
     public static class PolyhedraFactory
     {
-        // ==========================================================
-        // ЛАБ6 - ДЕЕВА АЛЕКСАНДРА (Правильные многогранники)
-        // ==========================================================
         public static Polyhedron Create(int index)
         {
             switch (index)
@@ -165,69 +162,98 @@ namespace PolyhedronLab
             return p;
         }
 
-        // ==========================================================
-        // ЛАБ7 - БОЧАРОВА КАТЕРИНА (Фигура вращения)
-        // ==========================================================
-        public static Polyhedron CreateRotationFigure(List<Point3D> generatrix, int axis, int segments)
+        public static Polyhedron CreateRotationFigure(
+    List<Point3D> generatrix,
+    int axis,
+    int segments)
         {
             var p = new Polyhedron();
-            if (generatrix.Count < 2) return p;
+
+            // Проверка входных данных
+            if (generatrix == null || generatrix.Count < 2)
+                return p;
+
+            if (segments < 3)
+                segments = 3;
+
+            if (axis < 0 || axis > 2)
+                axis = 1;
 
             int n = generatrix.Count;
-            for (int s = 0; s <= segments; s++)
+
+            // Создание вершин путем вращения образующей
+            for (int s = 0; s < segments; s++)
             {
-                double angle = (360.0 / segments) * s * Math.PI / 180.0;
+                double angle = 2.0 * Math.PI * s / segments;
+
                 double cos = Math.Cos(angle);
                 double sin = Math.Sin(angle);
 
                 foreach (var pt in generatrix)
                 {
-                    double x = pt.X, y = pt.Y, z = pt.Z;
-                    if (axis == 0) // X
+                    double x = pt.X;
+                    double y = pt.Y;
+                    double z = pt.Z;
+
+                    Point3D rotated;
+
+                    switch (axis)
                     {
-                        double ny = y * cos - z * sin;
-                        double nz = y * sin + z * cos;
-                        p.Vertices.Add(new Point3D(x, ny, nz));
+                        case 0: // Вращение вокруг X
+                            rotated = new Point3D(
+                                x,
+                                y * cos - z * sin,
+                                y * sin + z * cos
+                            );
+                            break;
+
+                        case 1: // Вращение вокруг Y
+                            rotated = new Point3D(
+                                x * cos + z * sin,
+                                y,
+                                -x * sin + z * cos
+                            );
+                            break;
+
+                        default: // Вращение вокруг Z
+                            rotated = new Point3D(
+                                x * cos - y * sin,
+                                x * sin + y * cos,
+                                z
+                            );
+                            break;
                     }
-                    else if (axis == 1) // Y
-                    {
-                        double nx = x * cos + z * sin;
-                        double nz = -x * sin + z * cos;
-                        p.Vertices.Add(new Point3D(nx, y, nz));
-                    }
-                    else // Z
-                    {
-                        double nx = x * cos - y * sin;
-                        double ny = x * sin + y * cos;
-                        p.Vertices.Add(new Point3D(nx, ny, z));
-                    }
+
+                    p.Vertices.Add(rotated);
                 }
             }
 
+            // Создание граней между соседними сечениями
             for (int s = 0; s < segments; s++)
             {
+                int nextS = (s + 1) % segments;
+
                 for (int i = 0; i < n - 1; i++)
                 {
                     int v1 = s * n + i;
                     int v2 = s * n + i + 1;
-                    int v3 = (s + 1) * n + i + 1;
-                    int v4 = (s + 1) * n + i;
-                    p.Faces.Add(new Face(new[] { v1, v2, v3, v4 }));
+                    int v3 = nextS * n + i + 1;
+                    int v4 = nextS * n + i;
+
+                    p.Faces.Add(
+                        new Face(new[] { v1, v2, v3, v4 })
+                    );
                 }
             }
 
             return p;
         }
 
-        // ==========================================================
-        // ЛАБ7 - СИДОРЧИК АЛИСА (График функции)
-        // ==========================================================
         public static Polyhedron CreateSurfaceGraph(Func<double, double, double> f,
             double x0, double x1, double y0, double y1, int divX, int divY)
         {
             var p = new Polyhedron();
 
-            // 1. Создаем сетку вершин
             for (int i = 0; i <= divX; i++)
             {
                 double x = x0 + (x1 - x0) * i / divX;
@@ -235,13 +261,10 @@ namespace PolyhedronLab
                 {
                     double y = y0 + (y1 - y0) * j / divY;
                     double z = f(x, y);
-
-                    // X - вправо, Y - высота (график), Z - вглубь
                     p.Vertices.Add(new Point3D(x, z, y));
                 }
             }
 
-            // 2. Создаем грани (треугольники)
             for (int i = 0; i < divX; i++)
             {
                 for (int j = 0; j < divY; j++)
@@ -250,13 +273,11 @@ namespace PolyhedronLab
                     int v2 = v1 + 1;
                     int v3 = (i + 1) * (divY + 1) + j + 1;
                     int v4 = (i + 1) * (divY + 1) + j;
-
                     p.Faces.Add(new Face(new[] { v1, v2, v3 }));
                     p.Faces.Add(new Face(new[] { v1, v3, v4 }));
                 }
             }
 
-            // 3. Масштабирование, чтобы влезло в экран
             double maxDist = 0;
             foreach (var v in p.Vertices)
                 maxDist = Math.Max(maxDist, v.Length);
