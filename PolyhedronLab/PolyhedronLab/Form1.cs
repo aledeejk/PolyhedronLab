@@ -212,7 +212,7 @@ namespace PolyhedronLab
             canvas.Invalidate();
         }
 
-        private void btnApply_Click(object sender, EventArgs e)
+        private void ApplyOperation(ComboBox cmbOp, TextBox txtParams)
         {
             try
             {
@@ -228,7 +228,7 @@ namespace PolyhedronLab
                 }
                 else
                 {
-                    var p = ParseParams();
+                    var p = ParseParams(txtParams.Text);
                     switch (cmbOp.SelectedIndex)
                     {
                         case 0: Require(p, 3); op = Matrix4x4.Translate(p[0], p[1], p[2]); break;
@@ -264,9 +264,13 @@ namespace PolyhedronLab
             catch (Exception ex) { MessageBox.Show(ex.Message, "Îøèáêà", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
-        private double[] ParseParams()
+        private void btnApply_Click(object sender, EventArgs e) => ApplyOperation(cmbOp, txtParams);
+        private void btnApplyRot_Click(object sender, EventArgs e) => ApplyOperation(cmbOpRot, txtParamsRot);
+        private void btnApplySurf_Click(object sender, EventArgs e) => ApplyOperation(cmbOpSurf, txtParamsSurf);
+
+        private double[] ParseParams(string text)
         {
-            string text = txtParams.Text.Trim();
+            text = text.Trim();
             if (text.Length == 0) return new double[0];
             var parts = text.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
             var res = new double[parts.Length];
