@@ -6,6 +6,9 @@ namespace PolyhedronLab
 {
     public static class PolyhedraFactory
     {
+        // ==========================================================
+        // ОБЩИЙ БЛОК (Выбор фигуры)
+        // ==========================================================
         public static Polyhedron Create(int index)
         {
             switch (index)
@@ -18,6 +21,11 @@ namespace PolyhedronLab
                 default: return Hexahedron();
             }
         }
+
+        // ==========================================================
+        // ДЕЕВА АЛЕКСАНДРА
+        // ЛАБ6: Правильные многогранники (Тетраэдр, Гексаэдр, Октаэдр, Икосаэдр, Додекаэдр)
+        // ==========================================================
 
         public static Polyhedron Tetrahedron()
         {
@@ -57,7 +65,6 @@ namespace PolyhedronLab
         public static Polyhedron Octahedron()
         {
             var p = new Polyhedron();
-            double scale = 1.5;
             p.Vertices.AddRange(new[]
             {
                 new Point3D( 1,  0,  0), new Point3D(-1,  0,  0),
@@ -163,92 +170,77 @@ namespace PolyhedronLab
             return p;
         }
 
-        public static Polyhedron CreateRotationFigure(
-    List<Point3D> generatrix,
-    int axis,
-    int segments)
+        // ==========================================================
+        // БОЧАРОВА КАТЕРИНА
+        // ЛАБ7: Построение фигуры вращения.
+        // ==========================================================
+
+        public static Polyhedron CreateRotationFigure(List<Point3D> generatrix, int axis, int segments)
         {
             var p = new Polyhedron();
-
-            // Проверка входных данных
-            if (generatrix == null || generatrix.Count < 2)
-                return p;
-
-            if (segments < 3)
-                segments = 3;
-
-            if (axis < 0 || axis > 2)
-                axis = 1;
+            if (generatrix.Count < 2) return p;
 
             int n = generatrix.Count;
-
-            // Создание вершин путем вращения образующей
-            for (int s = 0; s < segments; s++)
+            for (int s = 0; s <= segments; s++)
             {
-                double angle = 2.0 * Math.PI * s / segments;
-
+                double angle = (360.0 / segments) * s * Math.PI / 180.0;
                 double cos = Math.Cos(angle);
                 double sin = Math.Sin(angle);
 
                 foreach (var pt in generatrix)
                 {
-                    double x = pt.X;
-                    double y = pt.Y;
-                    double z = pt.Z;
-
-                    Point3D rotated;
-
-                    switch (axis)
+                    double x = pt.X, y = pt.Y, z = pt.Z;
+                    if (axis == 0) // X
                     {
-                        case 0: // Вращение вокруг X
-                            rotated = new Point3D(
-                                x,
-                                y * cos - z * sin,
-                                y * sin + z * cos
-                            );
-                            break;
-
-                        case 1: // Вращение вокруг Y
-                            rotated = new Point3D(
-                                x * cos + z * sin,
-                                y,
-                                -x * sin + z * cos
-                            );
-                            break;
-
-                        default: // Вращение вокруг Z
-                            rotated = new Point3D(
-                                x * cos - y * sin,
-                                x * sin + y * cos,
-                                z
-                            );
-                            break;
+                        double ny = y * cos - z * sin;
+                        double nz = y * sin + z * cos;
+                        p.Vertices.Add(new Point3D(x, ny, nz));
                     }
-
-                    p.Vertices.Add(rotated);
+                    else if (axis == 1) // Y
+                    {
+                        double nx = x * cos + z * sin;
+                        double nz = -x * sin + z * cos;
+                        p.Vertices.Add(new Point3D(nx, y, nz));
+                    }
+                    else // Z
+                    {
+                        double nx = x * cos - y * sin;
+                        double ny = x * sin + y * cos;
+                        p.Vertices.Add(new Point3D(nx, ny, z));
+                    }
                 }
             }
 
-            // Создание граней между соседними сечениями
             for (int s = 0; s < segments; s++)
             {
-                int nextS = (s + 1) % segments;
-
                 for (int i = 0; i < n - 1; i++)
                 {
                     int v1 = s * n + i;
                     int v2 = s * n + i + 1;
-                    int v3 = nextS * n + i + 1;
-                    int v4 = nextS * n + i;
-
-                    p.Faces.Add(
-                        new Face(new[] { v1, v2, v3, v4 })
-                    );
+                    int v3 = (s + 1) * n + i + 1;
+                    int v4 = (s + 1) * n + i;
+                    p.Faces.Add(new Face(new[] { v1, v2, v3, v4 }));
                 }
+            }
+
+            double maxDist = 0;
+            foreach (var v in p.Vertices)
+                maxDist = Math.Max(maxDist, v.Length);
+
+            if (maxDist > 0)
+            {
+                double scale = 1.5 / maxDist;
+                for (int i = 0; i < p.Vertices.Count; i++)
+                    p.Vertices[i] = p.Vertices[i] * scale;
             }
 
             return p;
         }
+
+        // ==========================================================
+        // СИДОРЧИК АЛИСА
+        // ЛАБ7: Построение графика функции (сегмент поверхности).
+        // ==========================================================
 
         public static Polyhedron CreateSurfaceGraph(Func<double, double, double> f,
             double x0, double x1, double y0, double y1, int divX, int divY)

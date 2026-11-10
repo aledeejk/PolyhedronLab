@@ -24,7 +24,6 @@ namespace PolyhedronLab
             double l = Length;
             return l < 1e-12 ? new Point3D(0, 0, 0) : new Point3D(X / l, Y / l, Z / l);
         }
-
         public static Point3D Cross(Point3D a, Point3D b)
             => new Point3D(
                 a.Y * b.Z - a.Z * b.Y,

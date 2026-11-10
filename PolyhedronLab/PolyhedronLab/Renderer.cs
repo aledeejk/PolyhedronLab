@@ -19,186 +19,12 @@ namespace PolyhedronLab
         private Matrix4x4 ViewMatrix() => Matrix4x4.RotateX(RotX) * Matrix4x4.RotateY(RotY);
 
         // =========================================================================
-        // ОБЫЧНАЯ ОТРИСОВКА (ЛР6/7)
+        // ДЕЕВА АЛЕКСАНДРА
+        // ЛАБ6: Отображение многогранников, Отражение (в матрицах).
+        // ЛАБ7: Загрузка/Сохранение (в ObjParser).
+        // ЛАБ8: Отсечение нелицевых граней (DrawCulled), Вектор обзора.
         // =========================================================================
-        public void Draw(Graphics g, Polyhedron poly, int cx, int cy)
-        {
-            if (poly == null || poly.Vertices.Count == 0) return;
 
-            var view = ViewMatrix();
-            double baseScale = 100.0;
-            double cameraDist = 15.0;
-
-            DrawAxes(g, cx, cy, view, Math.Min(cx, cy) * 0.8);
-
-            var projected = new PointF[poly.Vertices.Count];
-            var viewCoords = new Point3D[poly.Vertices.Count];
-            var depths = new double[poly.Vertices.Count];
-
-            for (int i = 0; i < poly.Vertices.Count; i++)
-            {
-                var v = poly.Vertices[i].Apply(view);
-                viewCoords[i] = v;
-
-                if (PerspectiveMode)
-                {
-                    double zDist = cameraDist - v.Z;
-                    if (zDist < 0.1) zDist = 0.1;
-                    double pScale = cameraDist / zDist;
-                    projected[i] = new PointF((float)(cx + (v.X * pScale) * baseScale), (float)(cy - (v.Y * pScale) * baseScale));
-                    depths[i] = zDist;
-                }
-                else
-                {
-                    projected[i] = new PointF((float)(cx + v.X * baseScale), (float)(cy - v.Y * baseScale));
-                    depths[i] = v.Z;
-                }
-            }
-
-            var facesToDraw = new List<(Face face, double avgDepth)>();
-
-            foreach (var face in poly.Faces)
-            {
-                if (face.Indices.Count < 3) continue;
-
-                if (CullBackFaces)
-                {
-                    var p0 = viewCoords[face.Indices[0]];
-                    var p1 = viewCoords[face.Indices[1]];
-                    var p2 = viewCoords[face.Indices[2]];
-                    var normal = Point3D.Cross(p1 - p0, p2 - p0).Normalized();
-                    if (Point3D.Dot(normal, new Point3D(0, 0, -1)) > 0) continue;
-                }
-
-                double depthSum = 0;
-                foreach (var idx in face.Indices) depthSum += depths[idx];
-                facesToDraw.Add((face, depthSum / face.Indices.Count));
-            }
-
-            facesToDraw.Sort((a, b) => a.avgDepth.CompareTo(b.avgDepth));
-
-            foreach (var (face, _) in facesToDraw)
-            {
-                var pts = new PointF[face.Indices.Count];
-                for (int i = 0; i < face.Indices.Count; i++)
-                    pts[i] = projected[face.Indices[i]];
-
-                if (!DrawEdgesOnly)
-                {
-                    using (var brush = new SolidBrush(Color.FromArgb(200, Color.SteelBlue)))
-                        g.FillPolygon(brush, pts);
-                }
-                using (var pen = new Pen(Color.DarkBlue, 1.0f))
-                    g.DrawPolygon(pen, pts);
-            }
-
-            if (ShowAxisLine)
-            {
-                var dir = (AxisPoint2 - AxisPoint1).Normalized();
-                var p1 = AxisPoint1 - dir * 5.0;
-                var p2 = AxisPoint2 + dir * 5.0;
-
-                PointF ProjectPoint(Point3D p)
-                {
-                    var v = p.Apply(view);
-                    if (PerspectiveMode)
-                    {
-                        double zDist = cameraDist - v.Z;
-                        if (zDist < 0.1) zDist = 0.1;
-                        double pScale = cameraDist / zDist;
-                        return new PointF((float)(cx + (v.X * pScale) * baseScale), (float)(cy - (v.Y * pScale) * baseScale));
-                    }
-                    else
-                    {
-                        return new PointF((float)(cx + v.X * baseScale), (float)(cy - v.Y * baseScale));
-                    }
-                }
-
-                using (var pen = new Pen(Color.Magenta, 2f))
-                {
-                    pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
-                    g.DrawLine(pen, ProjectPoint(p1), ProjectPoint(p2));
-                }
-            }
-        }
-
-        // =========================================================================
-        // ЛР8: КАМЕРА
-        // =========================================================================
-        public void DrawCamera(Graphics g, Polyhedron poly, int cx, int cy, double angle)
-        {
-            if (poly == null || poly.Vertices.Count == 0) return;
-
-            double baseScale = 70.0;
-            double cameraDist = 15.0;
-
-            // Вращаем мир вокруг Y и X
-            var view = Matrix4x4.RotateX(30) * Matrix4x4.RotateY(angle * 180 / Math.PI);
-
-            // Рисуем оси
-            DrawAxes(g, cx, cy, view, Math.Min(cx, cy) * 0.8);
-
-            var projected = new PointF[poly.Vertices.Count];
-            var viewCoords = new Point3D[poly.Vertices.Count];
-            var depths = new double[poly.Vertices.Count];
-
-            for (int i = 0; i < poly.Vertices.Count; i++)
-            {
-                var v = poly.Vertices[i].Apply(view);
-                viewCoords[i] = v;
-
-                if (PerspectiveMode)
-                {
-                    double zDist = cameraDist - v.Z;
-                    if (zDist < 0.1) zDist = 0.1;
-                    double pScale = cameraDist / zDist;
-                    projected[i] = new PointF((float)(cx + (v.X * pScale) * baseScale), (float)(cy - (v.Y * pScale) * baseScale));
-                    depths[i] = zDist;
-                }
-                else
-                {
-                    projected[i] = new PointF((float)(cx + v.X * baseScale), (float)(cy - v.Y * baseScale));
-                    depths[i] = v.Z;
-                }
-            }
-
-            var facesToDraw = new List<(Face face, double avgDepth)>();
-
-            foreach (var face in poly.Faces)
-            {
-                if (face.Indices.Count < 3) continue;
-
-                // ОТСЕЧЕНИЕ ЗАДНИХ ГРАНЕЙ
-                var p0 = viewCoords[face.Indices[0]];
-                var p1 = viewCoords[face.Indices[1]];
-                var p2 = viewCoords[face.Indices[2]];
-                var normal = Point3D.Cross(p1 - p0, p2 - p0).Normalized();
-
-                // Если нормаль смотрит ОТ нас, это задняя грань — пропускаем
-                if (Point3D.Dot(normal, new Point3D(0, 0, -1)) > 0) continue;
-
-                double depthSum = 0;
-                foreach (var idx in face.Indices) depthSum += depths[idx];
-                facesToDraw.Add((face, depthSum / face.Indices.Count));
-            }
-
-            facesToDraw.Sort((a, b) => a.avgDepth.CompareTo(b.avgDepth));
-
-            foreach (var (face, _) in facesToDraw)
-            {
-                var pts = new PointF[face.Indices.Count];
-                for (int i = 0; i < face.Indices.Count; i++)
-                    pts[i] = projected[face.Indices[i]];
-                using (var brush = new SolidBrush(Color.FromArgb(200, Color.SteelBlue)))
-                    g.FillPolygon(brush, pts);
-                using (var pen = new Pen(Color.DarkBlue, 1.0f))
-                    g.DrawPolygon(pen, pts);
-            }
-        }
-
-        // =========================================================================
-        // ЛР8: ОТСЕЧЕНИЕ
-        // =========================================================================
         public void DrawCulled(Graphics g, Polyhedron poly, int cx, int cy, Point3D viewVector)
         {
             if (poly == null || poly.Vertices.Count == 0) return;
@@ -206,6 +32,8 @@ namespace PolyhedronLab
             var view = ViewMatrix();
             double baseScale = 100.0;
             double cameraDist = 15.0;
+
+            DrawAxes(g, cx, cy, view, Math.Min(cx, cy) * 0.8);
 
             var projected = new PointF[poly.Vertices.Count];
             var viewCoords = new Point3D[poly.Vertices.Count];
@@ -257,16 +85,23 @@ namespace PolyhedronLab
                 for (int i = 0; i < face.Indices.Count; i++)
                     pts[i] = projected[face.Indices[i]];
 
-                using (var brush = new SolidBrush(Color.FromArgb(200, Color.SteelBlue)))
-                    g.FillPolygon(brush, pts);
+                if (!DrawEdgesOnly)
+                {
+                    using (var brush = new SolidBrush(Color.FromArgb(200, Color.SteelBlue)))
+                        g.FillPolygon(brush, pts);
+                }
                 using (var pen = new Pen(Color.DarkBlue, 1.0f))
                     g.DrawPolygon(pen, pts);
             }
         }
 
         // =========================================================================
-        // ЛР8: Z-БУФЕР
+        // БОЧАРОВА КАТЕРИНА
+        // ЛАБ6: Смещение, Масштаб (обычный и от центра), Повороты осей (в матрицах).
+        // ЛАБ7: Построение фигуры вращения (в PolyhedraFactory).
+        // ЛАБ8: Алгоритм Z-буфера (DrawTrueZBuffer, RasterizeTriangle).
         // =========================================================================
+
         public void DrawTrueZBuffer(Graphics g, List<Polyhedron> polys, int cx, int cy, int width, int height)
         {
             double[] zBuffer = new double[width * height];
@@ -433,8 +268,188 @@ namespace PolyhedronLab
         }
 
         // =========================================================================
-        // ОСИ
+        // СИДОРЧИК АЛИСА
+        // ЛАБ6: Повороты через центр, Поворот вокруг произвольной прямой (в матрицах).
+        // ЛАБ7: Построение графика функции (в PolyhedraFactory).
+        // ЛАБ8: Камера (DrawCamera).
         // =========================================================================
+
+        public void DrawCamera(Graphics g, Polyhedron poly, int cx, int cy, double angle)
+        {
+            if (poly == null || poly.Vertices.Count == 0) return;
+
+            double baseScale = 70.0;
+            double cameraDist = 15.0;
+
+            var view = Matrix4x4.RotateX(30) * Matrix4x4.RotateY(angle * 180 / Math.PI);
+            DrawAxes(g, cx, cy, view, Math.Min(cx, cy) * 0.8);
+
+            var projected = new PointF[poly.Vertices.Count];
+            var viewCoords = new Point3D[poly.Vertices.Count];
+            var depths = new double[poly.Vertices.Count];
+
+            for (int i = 0; i < poly.Vertices.Count; i++)
+            {
+                var v = poly.Vertices[i].Apply(view);
+                viewCoords[i] = v;
+
+                if (PerspectiveMode)
+                {
+                    double zDist = cameraDist - v.Z;
+                    if (zDist < 0.1) zDist = 0.1;
+                    double pScale = cameraDist / zDist;
+                    projected[i] = new PointF((float)(cx + (v.X * pScale) * baseScale), (float)(cy - (v.Y * pScale) * baseScale));
+                    depths[i] = zDist;
+                }
+                else
+                {
+                    projected[i] = new PointF((float)(cx + v.X * baseScale), (float)(cy - v.Y * baseScale));
+                    depths[i] = v.Z;
+                }
+            }
+
+            var facesToDraw = new List<(Face face, double avgDepth)>();
+
+            foreach (var face in poly.Faces)
+            {
+                if (face.Indices.Count < 3) continue;
+
+                var p0 = viewCoords[face.Indices[0]];
+                var p1 = viewCoords[face.Indices[1]];
+                var p2 = viewCoords[face.Indices[2]];
+                var normal = Point3D.Cross(p1 - p0, p2 - p0).Normalized();
+
+                if (Point3D.Dot(normal, new Point3D(0, 0, -1)) > 0) continue;
+
+                double depthSum = 0;
+                foreach (var idx in face.Indices) depthSum += depths[idx];
+                facesToDraw.Add((face, depthSum / face.Indices.Count));
+            }
+
+            facesToDraw.Sort((a, b) => a.avgDepth.CompareTo(b.avgDepth));
+
+            foreach (var (face, _) in facesToDraw)
+            {
+                var pts = new PointF[face.Indices.Count];
+                for (int i = 0; i < face.Indices.Count; i++)
+                    pts[i] = projected[face.Indices[i]];
+
+                if (!DrawEdgesOnly)
+                {
+                    using (var brush = new SolidBrush(Color.FromArgb(200, Color.SteelBlue)))
+                        g.FillPolygon(brush, pts);
+                }
+                using (var pen = new Pen(Color.DarkBlue, 1.0f))
+                    g.DrawPolygon(pen, pts);
+            }
+        }
+
+        // =========================================================================
+        // ОБЩИЙ БЛОК
+        // Отрисовка (ЛР6/7), Оси, Поворот произвольной прямой (ShowAxisLine).
+        // =========================================================================
+
+        public void Draw(Graphics g, Polyhedron poly, int cx, int cy)
+        {
+            if (poly == null || poly.Vertices.Count == 0) return;
+
+            var view = ViewMatrix();
+            double baseScale = 100.0;
+            double cameraDist = 15.0;
+
+            DrawAxes(g, cx, cy, view, Math.Min(cx, cy) * 0.8);
+
+            var projected = new PointF[poly.Vertices.Count];
+            var viewCoords = new Point3D[poly.Vertices.Count];
+            var depths = new double[poly.Vertices.Count];
+
+            for (int i = 0; i < poly.Vertices.Count; i++)
+            {
+                var v = poly.Vertices[i].Apply(view);
+                viewCoords[i] = v;
+
+                if (PerspectiveMode)
+                {
+                    double zDist = cameraDist - v.Z;
+                    if (zDist < 0.1) zDist = 0.1;
+                    double pScale = cameraDist / zDist;
+                    projected[i] = new PointF((float)(cx + (v.X * pScale) * baseScale), (float)(cy - (v.Y * pScale) * baseScale));
+                    depths[i] = zDist;
+                }
+                else
+                {
+                    projected[i] = new PointF((float)(cx + v.X * baseScale), (float)(cy - v.Y * baseScale));
+                    depths[i] = v.Z;
+                }
+            }
+
+            var facesToDraw = new List<(Face face, double avgDepth)>();
+
+            foreach (var face in poly.Faces)
+            {
+                if (face.Indices.Count < 3) continue;
+
+                if (CullBackFaces)
+                {
+                    var p0 = viewCoords[face.Indices[0]];
+                    var p1 = viewCoords[face.Indices[1]];
+                    var p2 = viewCoords[face.Indices[2]];
+                    var normal = Point3D.Cross(p1 - p0, p2 - p0).Normalized();
+                    if (Point3D.Dot(normal, new Point3D(0, 0, -1)) > 0) continue;
+                }
+
+                double depthSum = 0;
+                foreach (var idx in face.Indices) depthSum += depths[idx];
+                facesToDraw.Add((face, depthSum / face.Indices.Count));
+            }
+
+            facesToDraw.Sort((a, b) => a.avgDepth.CompareTo(b.avgDepth));
+
+            foreach (var (face, _) in facesToDraw)
+            {
+                var pts = new PointF[face.Indices.Count];
+                for (int i = 0; i < face.Indices.Count; i++)
+                    pts[i] = projected[face.Indices[i]];
+
+                if (!DrawEdgesOnly)
+                {
+                    using (var brush = new SolidBrush(Color.FromArgb(200, Color.SteelBlue)))
+                        g.FillPolygon(brush, pts);
+                }
+                using (var pen = new Pen(Color.DarkBlue, 1.0f))
+                    g.DrawPolygon(pen, pts);
+            }
+
+            if (ShowAxisLine)
+            {
+                var dir = (AxisPoint2 - AxisPoint1).Normalized();
+                var p1 = AxisPoint1 - dir * 5.0;
+                var p2 = AxisPoint2 + dir * 5.0;
+
+                PointF ProjectPoint(Point3D p)
+                {
+                    var v = p.Apply(view);
+                    if (PerspectiveMode)
+                    {
+                        double zDist = cameraDist - v.Z;
+                        if (zDist < 0.1) zDist = 0.1;
+                        double pScale = cameraDist / zDist;
+                        return new PointF((float)(cx + (v.X * pScale) * baseScale), (float)(cy - (v.Y * pScale) * baseScale));
+                    }
+                    else
+                    {
+                        return new PointF((float)(cx + v.X * baseScale), (float)(cy - v.Y * baseScale));
+                    }
+                }
+
+                using (var pen = new Pen(Color.Magenta, 2f))
+                {
+                    pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                    g.DrawLine(pen, ProjectPoint(p1), ProjectPoint(p2));
+                }
+            }
+        }
+
         private void DrawAxes(Graphics g, int cx, int cy, Matrix4x4 view, double maxPixelLength)
         {
             var axisX = new Point3D(1, 0, 0);

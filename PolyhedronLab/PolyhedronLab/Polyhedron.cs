@@ -7,6 +7,7 @@ namespace PolyhedronLab
         public List<Point3D> Vertices { get; } = new List<Point3D>();
         public List<Face> Faces { get; } = new List<Face>();
 
+        // Центр фигуры (используется для масштабирования от центра в ЛАБ6)
         public Point3D Center
         {
             get
@@ -18,6 +19,7 @@ namespace PolyhedronLab
             }
         }
 
+        // Максимальный радиус (используется для настройки камеры и масштаба в ЛАБ7/8)
         public double MaxRadius
         {
             get
@@ -34,6 +36,7 @@ namespace PolyhedronLab
             }
         }
 
+        // Применение матрицы (общий метод для всех аффинных преобразований)
         public Polyhedron Transformed(Matrix4x4 m)
         {
             var copy = new Polyhedron();

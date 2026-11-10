@@ -64,9 +64,12 @@
             btnResetSurf = new Button();
             btnUndoSurf = new Button();
 
-            // Вкладка 4
+            // Вкладка 4 (Отсечение)
             tabCulling = new TabPage();
             lblCullingInfo = new Label();
+            cmbCullShape = new ComboBox();      // НОВЫЙ
+            btnLoadCull = new Button();         // НОВЫЙ
+            btnSaveCull = new Button();         // НОВЫЙ
             btnTestCulling = new Button();
             txtViewVector = new TextBox();
             lblViewVector = new Label();
@@ -86,16 +89,19 @@
             btnAddSecondObject = new Button();
             lblOpZBuffer = new Label();
             cmbOpZBuffer = new ComboBox();
-            cmbZBufferTarget = new ComboBox(); // <--- НОВЫЙ
+            cmbZBufferTarget = new ComboBox();
             lblParamsZBuffer = new Label();
             txtParamsZBuffer = new TextBox();
             btnApplyZBuffer = new Button();
             btnResetZBuffer = new Button();
             btnUndoZBuffer = new Button();
 
-            // Вкладка 6
+            // Вкладка 6 (Камера)
             tabCamera = new TabPage();
             lblCameraInfo = new Label();
+            cmbCamShape = new ComboBox();       // НОВЫЙ
+            btnLoadCam = new Button();          // НОВЫЙ
+            btnSaveCam = new Button();          // НОВЫЙ
             btnRotateCamera = new Button();
             trbCameraAngle = new TrackBar();
             lblOpCam = new Label();
@@ -267,8 +273,11 @@
             btnResetSurf.Location = new Point(150, 380); btnResetSurf.Size = new Size(130, 40); btnResetSurf.Text = "Сброс"; btnResetSurf.Click += btnReset_Click;
             btnUndoSurf.Location = new Point(10, 430); btnUndoSurf.Size = new Size(270, 40); btnUndoSurf.Text = "Отменить последнее действие"; btnUndoSurf.Click += btnUndo_Click;
 
-            // ================= ВКЛАДКА 4 =================
+            // ================= ВКЛАДКА 4: ОТСЕЧЕНИЕ =================
             tabCulling.Controls.Add(lblCullingInfo);
+            tabCulling.Controls.Add(cmbCullShape);      // <-- ВЫБОР ФИГУРЫ
+            tabCulling.Controls.Add(btnLoadCull);       // <-- ЗАГРУЗИТЬ
+            tabCulling.Controls.Add(btnSaveCull);       // <-- СОХРАНИТЬ
             tabCulling.Controls.Add(btnTestCulling);
             tabCulling.Controls.Add(txtViewVector);
             tabCulling.Controls.Add(lblViewVector);
@@ -285,19 +294,27 @@
             tabCulling.Text = "Отсечение";
 
             lblCullingInfo.Location = new Point(10, 10); lblCullingInfo.Size = new Size(270, 40); lblCullingInfo.Text = "Демонстрация отсечения нелицевых граней.";
-            lblViewVector.Location = new Point(10, 60); lblViewVector.Size = new Size(200, 25); lblViewVector.Text = "Вектор обзора (x,y,z):";
-            txtViewVector.Location = new Point(10, 85); txtViewVector.Size = new Size(285, 27); txtViewVector.Text = "0, 0, -1";
-            btnTestCulling.Location = new Point(10, 120); btnTestCulling.Size = new Size(270, 30); btnTestCulling.Text = "Применить вектор обзора"; btnTestCulling.Click += btnTestCulling_Click;
 
-            lblOpCull.Location = new Point(10, 170); lblOpCull.Size = new Size(150, 25); lblOpCull.Text = "Преобразование:";
+            cmbCullShape.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbCullShape.Items.AddRange(new object[] { "Куб", "Тетраэдр", "Октаэдр", "Икосаэдр", "Додекаэдр" });
+            cmbCullShape.Location = new Point(10, 55); cmbCullShape.Size = new Size(110, 28); cmbCullShape.SelectedIndexChanged += cmbCullShape_SelectedIndexChanged;
+
+            btnLoadCull.Location = new Point(130, 55); btnLoadCull.Size = new Size(75, 28); btnLoadCull.Text = "Загрузить"; btnLoadCull.Click += btnLoadCull_Click;
+            btnSaveCull.Location = new Point(210, 55); btnSaveCull.Size = new Size(75, 28); btnSaveCull.Text = "Сохранить"; btnSaveCull.Click += btnSaveCull_Click;
+
+            lblViewVector.Location = new Point(10, 100); lblViewVector.Size = new Size(200, 25); lblViewVector.Text = "Вектор обзора (x,y,z):";
+            txtViewVector.Location = new Point(10, 125); txtViewVector.Size = new Size(285, 27); txtViewVector.Text = "0, 0, -1";
+            btnTestCulling.Location = new Point(10, 160); btnTestCulling.Size = new Size(285, 30); btnTestCulling.Text = "Применить вектор обзора"; btnTestCulling.Click += btnTestCulling_Click;
+
+            lblOpCull.Location = new Point(10, 210); lblOpCull.Size = new Size(150, 25); lblOpCull.Text = "Преобразование:";
             cmbOpCull.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbOpCull.Items.AddRange(new object[] { "Смещение (dx,dy,dz)", "Масштаб (sx,sy,sz)", "Поворот вокруг X", "Поворот вокруг Y", "Поворот вокруг Z" });
-            cmbOpCull.Location = new Point(10, 198); cmbOpCull.Size = new Size(285, 28);
-            lblParamsCull.Location = new Point(10, 240); lblParamsCull.Size = new Size(270, 25); lblParamsCull.Text = "Параметры (через запятую):";
-            txtParamsCull.Location = new Point(10, 268); txtParamsCull.Size = new Size(285, 27); txtParamsCull.Text = "0,0,0";
-            btnApplyCull.Location = new Point(10, 310); btnApplyCull.Size = new Size(130, 40); btnApplyCull.Text = "Применить"; btnApplyCull.Click += btnApplyCull_Click;
-            btnResetCull.Location = new Point(150, 310); btnResetCull.Size = new Size(130, 40); btnResetCull.Text = "Сброс"; btnResetCull.Click += btnReset_Click;
-            btnUndoCull.Location = new Point(10, 360); btnUndoCull.Size = new Size(270, 40); btnUndoCull.Text = "Отменить последнее действие"; btnUndoCull.Click += btnUndo_Click;
+            cmbOpCull.Location = new Point(10, 238); cmbOpCull.Size = new Size(285, 28);
+            lblParamsCull.Location = new Point(10, 280); lblParamsCull.Size = new Size(270, 25); lblParamsCull.Text = "Параметры (через запятую):";
+            txtParamsCull.Location = new Point(10, 308); txtParamsCull.Size = new Size(285, 27); txtParamsCull.Text = "0,0,0";
+            btnApplyCull.Location = new Point(10, 350); btnApplyCull.Size = new Size(130, 40); btnApplyCull.Text = "Применить"; btnApplyCull.Click += btnApplyCull_Click;
+            btnResetCull.Location = new Point(150, 350); btnResetCull.Size = new Size(130, 40); btnResetCull.Text = "Сброс"; btnResetCull.Click += btnReset_Click;
+            btnUndoCull.Location = new Point(10, 400); btnUndoCull.Size = new Size(270, 40); btnUndoCull.Text = "Отменить последнее действие"; btnUndoCull.Click += btnUndo_Click;
 
             // ================= ВКЛАДКА 5: Z-БУФЕР =================
             tabZBuffer.Controls.Add(lblZBufferInfo);
@@ -331,7 +348,6 @@
             cmbOpZBuffer.Items.AddRange(new object[] { "Смещение (dx,dy,dz)", "Масштаб (sx,sy,sz)", "Поворот вокруг X", "Поворот вокруг Y", "Поворот вокруг Z" });
             cmbOpZBuffer.Location = new Point(10, 138); cmbOpZBuffer.Size = new Size(285, 28);
 
-            // ComboBox для выбора цели
             cmbZBufferTarget.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbZBufferTarget.Items.AddRange(new object[] { "Оба объекта", "Только первый", "Только второй" });
             cmbZBufferTarget.Location = new Point(10, 175); cmbZBufferTarget.Size = new Size(285, 28);
@@ -343,8 +359,11 @@
             btnResetZBuffer.Location = new Point(150, 285); btnResetZBuffer.Size = new Size(130, 40); btnResetZBuffer.Text = "Сброс"; btnResetZBuffer.Click += btnReset_Click;
             btnUndoZBuffer.Location = new Point(10, 335); btnUndoZBuffer.Size = new Size(270, 40); btnUndoZBuffer.Text = "Отменить последнее действие"; btnUndoZBuffer.Click += btnUndo_Click;
 
-            // ================= ВКЛАДКА 6 =================
+            // ================= ВКЛАДКА 6: КАМЕРА =================
             tabCamera.Controls.Add(lblCameraInfo);
+            tabCamera.Controls.Add(cmbCamShape);         // <-- ВЫБОР ФИГУРЫ
+            tabCamera.Controls.Add(btnLoadCam);          // <-- ЗАГРУЗИТЬ
+            tabCamera.Controls.Add(btnSaveCam);          // <-- СОХРАНИТЬ
             tabCamera.Controls.Add(btnRotateCamera);
             tabCamera.Controls.Add(trbCameraAngle);
             tabCamera.Controls.Add(lblOpCam);
@@ -360,18 +379,26 @@
             tabCamera.Text = "Камера";
 
             lblCameraInfo.Location = new Point(10, 10); lblCameraInfo.Size = new Size(270, 40); lblCameraInfo.Text = "Камера вращается вокруг объекта.";
-            btnRotateCamera.Location = new Point(10, 55); btnRotateCamera.Size = new Size(270, 30); btnRotateCamera.Text = "Включить/остановить вращение"; btnRotateCamera.Click += btnRotateCamera_Click;
-            trbCameraAngle.Location = new Point(10, 95); trbCameraAngle.Size = new Size(270, 45); trbCameraAngle.Minimum = 0; trbCameraAngle.Maximum = 360; trbCameraAngle.Value = 0;
 
-            lblOpCam.Location = new Point(10, 150); lblOpCam.Size = new Size(150, 25); lblOpCam.Text = "Преобразование:";
+            cmbCamShape.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbCamShape.Items.AddRange(new object[] { "Куб", "Тетраэдр", "Октаэдр", "Икосаэдр", "Додекаэдр" });
+            cmbCamShape.Location = new Point(10, 55); cmbCamShape.Size = new Size(110, 28); cmbCamShape.SelectedIndexChanged += cmbCamShape_SelectedIndexChanged;
+
+            btnLoadCam.Location = new Point(130, 55); btnLoadCam.Size = new Size(75, 28); btnLoadCam.Text = "Загрузить"; btnLoadCam.Click += btnLoadCam_Click;
+            btnSaveCam.Location = new Point(210, 55); btnSaveCam.Size = new Size(75, 28); btnSaveCam.Text = "Сохранить"; btnSaveCam.Click += btnSaveCam_Click;
+
+            btnRotateCamera.Location = new Point(10, 100); btnRotateCamera.Size = new Size(285, 30); btnRotateCamera.Text = "Включить/остановить вращение"; btnRotateCamera.Click += btnRotateCamera_Click;
+            trbCameraAngle.Location = new Point(10, 140); trbCameraAngle.Size = new Size(285, 45); trbCameraAngle.Minimum = 0; trbCameraAngle.Maximum = 360; trbCameraAngle.Value = 0;
+
+            lblOpCam.Location = new Point(10, 190); lblOpCam.Size = new Size(150, 25); lblOpCam.Text = "Преобразование:";
             cmbOpCam.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbOpCam.Items.AddRange(new object[] { "Смещение (dx,dy,dz)", "Масштаб (sx,sy,sz)", "Поворот вокруг X", "Поворот вокруг Y", "Поворот вокруг Z" });
-            cmbOpCam.Location = new Point(10, 178); cmbOpCam.Size = new Size(285, 28);
-            lblParamsCam.Location = new Point(10, 220); lblParamsCam.Size = new Size(270, 25); lblParamsCam.Text = "Параметры (через запятую):";
-            txtParamsCam.Location = new Point(10, 248); txtParamsCam.Size = new Size(285, 27); txtParamsCam.Text = "0,0,0";
-            btnApplyCam.Location = new Point(10, 290); btnApplyCam.Size = new Size(130, 40); btnApplyCam.Text = "Применить"; btnApplyCam.Click += btnApplyCam_Click;
-            btnResetCam.Location = new Point(150, 290); btnResetCam.Size = new Size(130, 40); btnResetCam.Text = "Сброс"; btnResetCam.Click += btnReset_Click;
-            btnUndoCam.Location = new Point(10, 340); btnUndoCam.Size = new Size(270, 40); btnUndoCam.Text = "Отменить последнее действие"; btnUndoCam.Click += btnUndo_Click;
+            cmbOpCam.Location = new Point(10, 218); cmbOpCam.Size = new Size(285, 28);
+            lblParamsCam.Location = new Point(10, 260); lblParamsCam.Size = new Size(270, 25); lblParamsCam.Text = "Параметры (через запятую):";
+            txtParamsCam.Location = new Point(10, 288); txtParamsCam.Size = new Size(285, 27); txtParamsCam.Text = "0,0,0";
+            btnApplyCam.Location = new Point(10, 330); btnApplyCam.Size = new Size(130, 40); btnApplyCam.Text = "Применить"; btnApplyCam.Click += btnApplyCam_Click;
+            btnResetCam.Location = new Point(150, 330); btnResetCam.Size = new Size(130, 40); btnResetCam.Text = "Сброс"; btnResetCam.Click += btnReset_Click;
+            btnUndoCam.Location = new Point(10, 380); btnUndoCam.Size = new Size(270, 40); btnUndoCam.Text = "Отменить последнее действие"; btnUndoCam.Click += btnUndo_Click;
 
             // ================= ОБЩИЕ =================
             grpProjection.Controls.Add(rbAxonometric);
@@ -464,6 +491,9 @@
 
         private TabPage tabCulling;
         private Label lblCullingInfo;
+        private ComboBox cmbCullShape;     // НОВЫЙ
+        private Button btnLoadCull;        // НОВЫЙ
+        private Button btnSaveCull;        // НОВЫЙ
         private Button btnTestCulling;
         private TextBox txtViewVector;
         private Label lblViewVector;
@@ -482,7 +512,7 @@
         private Button btnAddSecondObject;
         private Label lblOpZBuffer;
         private ComboBox cmbOpZBuffer;
-        private ComboBox cmbZBufferTarget; // <--- НОВЫЙ
+        private ComboBox cmbZBufferTarget;
         private Label lblParamsZBuffer;
         private TextBox txtParamsZBuffer;
         private Button btnApplyZBuffer;
@@ -491,6 +521,9 @@
 
         private TabPage tabCamera;
         private Label lblCameraInfo;
+        private ComboBox cmbCamShape;      // НОВЫЙ
+        private Button btnLoadCam;         // НОВЫЙ
+        private Button btnSaveCam;         // НОВЫЙ
         private Button btnRotateCamera;
         private TrackBar trbCameraAngle;
         private Label lblOpCam;

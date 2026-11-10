@@ -14,18 +14,16 @@ namespace PolyhedronLab
         private Matrix4x4 _modelMatrix = Matrix4x4.Identity();
         private Stack<Matrix4x4> _matrixHistory = new Stack<Matrix4x4>();
 
-        // Поля для ЛР8 (Z-буфер)
+        // Поля для ЛР8
         private Polyhedron _zBufferPoly1;
         private Polyhedron _zBufferPoly2;
         private bool _showSecondZBufferObject = false;
-
-        // Поля для камеры
         private bool _rotateCamera = false;
         private System.Windows.Forms.Timer _cameraTimer;
         private double _cameraAngle = 0;
-
-        // Вектор обзора для отсечения
         private Point3D _viewVector = new Point3D(0, 0, -1);
+        private Polyhedron _cullPoly;
+        private Polyhedron _camPoly;
 
         public Form1()
         {
@@ -35,10 +33,11 @@ namespace PolyhedronLab
                 null, canvas, new object[] { true });
 
             _poly = PolyhedraFactory.Create(cmbShape.SelectedIndex);
+            _cullPoly = PolyhedraFactory.Hexahedron();
+            _camPoly = PolyhedraFactory.Hexahedron();
             _renderer.PerspectiveMode = rbPerspective.Checked;
             lblStatus.Text = "Готово. Выберите действие.";
 
-            // Инициализация Z-буфера
             _zBufferPoly1 = PolyhedraFactory.Hexahedron();
             _zBufferPoly2 = PolyhedraFactory.Hexahedron().Transformed(Matrix4x4.Translate(2.5, 1.0, 0));
 
@@ -47,40 +46,6 @@ namespace PolyhedronLab
             _cameraTimer = new System.Windows.Forms.Timer();
             _cameraTimer.Interval = 50;
             _cameraTimer.Tick += CameraTimer_Tick;
-        }
-
-        private void CameraTimer_Tick(object sender, EventArgs e)
-        {
-            _cameraAngle += 2;
-            if (_cameraAngle > 360) _cameraAngle -= 360;
-            trbCameraAngle.Value = (int)_cameraAngle;
-            canvas.Invalidate();
-        }
-
-        private void tabControl_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (tabControl.SelectedTab == tabSurface)
-            {
-                btnBuildSurface_Click(null, null);
-            }
-            else if (tabControl.SelectedTab == tabRotation)
-            {
-                btnBuildRotation_Click(null, null);
-            }
-            else if (tabControl.SelectedTab == tabCamera)
-            {
-                rbPerspective.Checked = true;
-                _cameraTimer.Start();
-                _rotateCamera = true;
-                lblStatus.Text = "Включена перспективная проекция (камера)";
-                canvas.Invalidate();
-            }
-            else
-            {
-                _cameraTimer.Stop();
-                _rotateCamera = false;
-                canvas.Invalidate();
-            }
         }
 
         private void canvas_Resize(object sender, EventArgs e) => canvas.Invalidate();
@@ -92,9 +57,8 @@ namespace PolyhedronLab
 
             if (tabControl.SelectedTab == tabCulling)
             {
-                if (_poly == null || _poly.Vertices.Count == 0) return;
-                var display = _poly.Transformed(_modelMatrix);
-                _renderer.DrawCulled(e.Graphics, display, canvas.Width / 2, canvas.Height / 2, _viewVector);
+                if (_cullPoly == null || _cullPoly.Vertices.Count == 0) return;
+                _renderer.DrawCulled(e.Graphics, _cullPoly, canvas.Width / 2, canvas.Height / 2, _viewVector);
             }
             else if (tabControl.SelectedTab == tabZBuffer)
             {
@@ -104,9 +68,8 @@ namespace PolyhedronLab
             }
             else if (tabControl.SelectedTab == tabCamera)
             {
-                if (_poly == null || _poly.Vertices.Count == 0) return;
-                var display = _poly.Transformed(_modelMatrix);
-                _renderer.DrawCamera(e.Graphics, display, canvas.Width / 2, canvas.Height / 2, _cameraAngle * Math.PI / 180);
+                if (_camPoly == null || _camPoly.Vertices.Count == 0) return;
+                _renderer.DrawCamera(e.Graphics, _camPoly, canvas.Width / 2, canvas.Height / 2, _cameraAngle * Math.PI / 180);
             }
             else
             {
@@ -116,139 +79,12 @@ namespace PolyhedronLab
             }
         }
 
-        // ================= ЛР8: ОТСЕЧЕНИЕ =================
-
-        private void btnTestCulling_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                var parts = txtViewVector.Text.Split(',');
-                if (parts.Length == 3)
-                {
-                    _viewVector = new Point3D(
-                        double.Parse(parts[0].Trim(), CultureInfo.InvariantCulture),
-                        double.Parse(parts[1].Trim(), CultureInfo.InvariantCulture),
-                        double.Parse(parts[2].Trim(), CultureInfo.InvariantCulture));
-                    lblStatus.Text = "Вектор обзора обновлен";
-                    canvas.Invalidate();
-                }
-            }
-            catch { MessageBox.Show("Ошибка ввода вектора"); }
-        }
-
-        private void btnApplyCull_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                var p = ParseParams(txtParamsCull.Text);
-                Matrix4x4 op = Matrix4x4.Identity();
-                switch (cmbOpCull.SelectedIndex)
-                {
-                    case 0: Require(p, 3); op = Matrix4x4.Translate(p[0], p[1], p[2]); break;
-                    case 1: Require(p, 3); op = Matrix4x4.Scale(p[0], p[1], p[2]); break;
-                    case 2: Require(p, 1); op = Matrix4x4.RotateX(p[0]); break;
-                    case 3: Require(p, 1); op = Matrix4x4.RotateY(p[0]); break;
-                    case 4: Require(p, 1); op = Matrix4x4.RotateZ(p[0]); break;
-                }
-                _poly = _poly.Transformed(op);
-                lblStatus.Text = "Применено (Отсечение)";
-                canvas.Invalidate();
-            }
-            catch (Exception ex) { MessageBox.Show(ex.Message); }
-        }
-
-        // ================= ЛР8: Z-БУФЕР =================
-
-        private void btnAddSecondObject_Click(object sender, EventArgs e)
-        {
-            _showSecondZBufferObject = !_showSecondZBufferObject;
-            lblStatus.Text = _showSecondZBufferObject ? "Второй объект добавлен" : "Второй объект убран";
-            canvas.Invalidate();
-        }
-
-        private void cmbZBufferShape_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            switch (cmbZBufferShape.SelectedIndex)
-            {
-                case 0: _zBufferPoly1 = PolyhedraFactory.Hexahedron(); break;
-                case 1: _zBufferPoly1 = PolyhedraFactory.Octahedron(); break;
-                case 2: _zBufferPoly1 = PolyhedraFactory.Tetrahedron(); break;
-            }
-            canvas.Invalidate();
-        }
-
-        private void cmbZBufferShape2_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            switch (cmbZBufferShape2.SelectedIndex)
-            {
-                case 0: _zBufferPoly2 = PolyhedraFactory.Hexahedron(); break;
-                case 1: _zBufferPoly2 = PolyhedraFactory.Octahedron(); break;
-                case 2: _zBufferPoly2 = PolyhedraFactory.Tetrahedron(); break;
-            }
-            _zBufferPoly2 = _zBufferPoly2.Transformed(Matrix4x4.Translate(2.5, 1.0, 0));
-            canvas.Invalidate();
-        }
-
-        private void btnApplyZBuffer_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                var p = ParseParams(txtParamsZBuffer.Text);
-                Matrix4x4 op = Matrix4x4.Identity();
-                switch (cmbOpZBuffer.SelectedIndex)
-                {
-                    case 0: Require(p, 3); op = Matrix4x4.Translate(p[0], p[1], p[2]); break;
-                    case 1: Require(p, 3); op = Matrix4x4.Scale(p[0], p[1], p[2]); break;
-                    case 2: Require(p, 1); op = Matrix4x4.RotateX(p[0]); break;
-                    case 3: Require(p, 1); op = Matrix4x4.RotateY(p[0]); break;
-                    case 4: Require(p, 1); op = Matrix4x4.RotateZ(p[0]); break;
-                }
-
-                // Применяем в зависимости от выбора цели
-                if (cmbZBufferTarget.SelectedIndex == 0 || cmbZBufferTarget.SelectedIndex == 1)
-                    _zBufferPoly1 = _zBufferPoly1.Transformed(op);
-
-                if (_showSecondZBufferObject && (cmbZBufferTarget.SelectedIndex == 0 || cmbZBufferTarget.SelectedIndex == 2))
-                    _zBufferPoly2 = _zBufferPoly2.Transformed(op);
-
-                lblStatus.Text = "Применено (Z-буфер)";
-                canvas.Invalidate();
-            }
-            catch (Exception ex) { MessageBox.Show(ex.Message); }
-        }
-
-        // ================= ЛР8: КАМЕРА =================
-
-        private void btnRotateCamera_Click(object sender, EventArgs e)
-        {
-            _rotateCamera = !_rotateCamera;
-            if (_rotateCamera) _cameraTimer.Start();
-            else _cameraTimer.Stop();
-            lblStatus.Text = _rotateCamera ? "Камера вращается" : "Вращение остановлено";
-        }
-
-        private void btnApplyCam_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                var p = ParseParams(txtParamsCam.Text);
-                Matrix4x4 op = Matrix4x4.Identity();
-                switch (cmbOpCam.SelectedIndex)
-                {
-                    case 0: Require(p, 3); op = Matrix4x4.Translate(p[0], p[1], p[2]); break;
-                    case 1: Require(p, 3); op = Matrix4x4.Scale(p[0], p[1], p[2]); break;
-                    case 2: Require(p, 1); op = Matrix4x4.RotateX(p[0]); break;
-                    case 3: Require(p, 1); op = Matrix4x4.RotateY(p[0]); break;
-                    case 4: Require(p, 1); op = Matrix4x4.RotateZ(p[0]); break;
-                }
-                _poly = _poly.Transformed(op);
-                lblStatus.Text = "Применено (Камера)";
-                canvas.Invalidate();
-            }
-            catch (Exception ex) { MessageBox.Show(ex.Message); }
-        }
-
-        // ================= ЛР6/7 (ОБЩИЕ) =================
+        // =========================================================================
+        // ДЕЕВА АЛЕКСАНДРА
+        // ЛАБ6: Отображение многогранников, Отражение.
+        // ЛАБ7: Загрузка/Сохранение OBJ.
+        // ЛАБ8: Отсечение нелицевых граней, Вектор обзора.
+        // =========================================================================
 
         private void cmbShape_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -296,6 +132,93 @@ namespace PolyhedronLab
             }
         }
 
+        // Отсечение нелицевых граней
+        private void btnTestCulling_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var parts = txtViewVector.Text.Split(',');
+                if (parts.Length == 3)
+                {
+                    _viewVector = new Point3D(
+                        double.Parse(parts[0].Trim(), CultureInfo.InvariantCulture),
+                        double.Parse(parts[1].Trim(), CultureInfo.InvariantCulture),
+                        double.Parse(parts[2].Trim(), CultureInfo.InvariantCulture));
+                    lblStatus.Text = "Вектор обзора обновлен";
+                    canvas.Invalidate();
+                }
+            }
+            catch { MessageBox.Show("Ошибка ввода вектора"); }
+        }
+
+        private void btnApplyCull_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var p = ParseParams(txtParamsCull.Text);
+                Matrix4x4 op = Matrix4x4.Identity();
+                switch (cmbOpCull.SelectedIndex)
+                {
+                    case 0: Require(p, 3); op = Matrix4x4.Translate(p[0], p[1], p[2]); break;
+                    case 1: Require(p, 3); op = Matrix4x4.Scale(p[0], p[1], p[2]); break;
+                    case 2: Require(p, 1); op = Matrix4x4.RotateX(p[0]); break;
+                    case 3: Require(p, 1); op = Matrix4x4.RotateY(p[0]); break;
+                    case 4: Require(p, 1); op = Matrix4x4.RotateZ(p[0]); break;
+                }
+                _cullPoly = _cullPoly.Transformed(op);
+                lblStatus.Text = "Применено (Отсечение)";
+                canvas.Invalidate();
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+
+        private void cmbCullShape_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch (cmbCullShape.SelectedIndex)
+            {
+                case 0: _cullPoly = PolyhedraFactory.Hexahedron(); break;
+                case 1: _cullPoly = PolyhedraFactory.Tetrahedron(); break;
+                case 2: _cullPoly = PolyhedraFactory.Octahedron(); break;
+                case 3: _cullPoly = PolyhedraFactory.Icosahedron(); break;
+                case 4: _cullPoly = PolyhedraFactory.Dodecahedron(); break;
+            }
+            canvas.Invalidate();
+        }
+
+        private void btnLoadCull_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Filter = "Wavefront OBJ (*.obj)|*.obj";
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    try { _cullPoly = ObjParser.Load(ofd.FileName); canvas.Invalidate(); }
+                    catch (Exception ex) { MessageBox.Show(ex.Message); }
+                }
+            }
+        }
+
+        private void btnSaveCull_Click(object sender, EventArgs e)
+        {
+            if (_cullPoly == null) return;
+            using (SaveFileDialog sfd = new SaveFileDialog())
+            {
+                sfd.Filter = "Wavefront OBJ (*.obj)|*.obj";
+                if (sfd.ShowDialog() == DialogResult.OK)
+                {
+                    try { ObjParser.Save(_cullPoly, sfd.FileName); }
+                    catch (Exception ex) { MessageBox.Show(ex.Message); }
+                }
+            }
+        }
+
+        // =========================================================================
+        // БОЧАРОВА КАТЕРИНА
+        // ЛАБ6: Смещение, Масштаб (обычный и от центра), Повороты осей.
+        // ЛАБ7: Построение фигуры вращения.
+        // ЛАБ8: Алгоритм Z-буфера.
+        // =========================================================================
+
         private void btnBuildRotation_Click(object sender, EventArgs e)
         {
             try
@@ -330,6 +253,70 @@ namespace PolyhedronLab
             catch (Exception ex) { MessageBox.Show("Ошибка: " + ex.Message); }
         }
 
+        private void btnAddSecondObject_Click(object sender, EventArgs e)
+        {
+            _showSecondZBufferObject = !_showSecondZBufferObject;
+            lblStatus.Text = _showSecondZBufferObject ? "Второй объект добавлен" : "Второй объект убран";
+            canvas.Invalidate();
+        }
+
+        private void cmbZBufferShape_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch (cmbZBufferShape.SelectedIndex)
+            {
+                case 0: _zBufferPoly1 = PolyhedraFactory.Hexahedron(); break;
+                case 1: _zBufferPoly1 = PolyhedraFactory.Octahedron(); break;
+                case 2: _zBufferPoly1 = PolyhedraFactory.Tetrahedron(); break;
+            }
+            canvas.Invalidate();
+        }
+
+        private void cmbZBufferShape2_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch (cmbZBufferShape2.SelectedIndex)
+            {
+                case 0: _zBufferPoly2 = PolyhedraFactory.Hexahedron(); break;
+                case 1: _zBufferPoly2 = PolyhedraFactory.Octahedron(); break;
+                case 2: _zBufferPoly2 = PolyhedraFactory.Tetrahedron(); break;
+            }
+            _zBufferPoly2 = _zBufferPoly2.Transformed(Matrix4x4.Translate(2.5, 1.0, 0));
+            canvas.Invalidate();
+        }
+
+        private void btnApplyZBuffer_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var p = ParseParams(txtParamsZBuffer.Text);
+                Matrix4x4 op = Matrix4x4.Identity();
+                switch (cmbOpZBuffer.SelectedIndex)
+                {
+                    case 0: Require(p, 3); op = Matrix4x4.Translate(p[0], p[1], p[2]); break;
+                    case 1: Require(p, 3); op = Matrix4x4.Scale(p[0], p[1], p[2]); break;
+                    case 2: Require(p, 1); op = Matrix4x4.RotateX(p[0]); break;
+                    case 3: Require(p, 1); op = Matrix4x4.RotateY(p[0]); break;
+                    case 4: Require(p, 1); op = Matrix4x4.RotateZ(p[0]); break;
+                }
+
+                if (cmbZBufferTarget.SelectedIndex == 0 || cmbZBufferTarget.SelectedIndex == 1)
+                    _zBufferPoly1 = _zBufferPoly1.Transformed(op);
+
+                if (_showSecondZBufferObject && (cmbZBufferTarget.SelectedIndex == 0 || cmbZBufferTarget.SelectedIndex == 2))
+                    _zBufferPoly2 = _zBufferPoly2.Transformed(op);
+
+                lblStatus.Text = "Применено (Z-буфер)";
+                canvas.Invalidate();
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+
+        // =========================================================================
+        // СИДОРЧИК АЛИСА
+        // ЛАБ6: Повороты через центр, Поворот вокруг произвольной прямой.
+        // ЛАБ7: Построение графика функции.
+        // ЛАБ8: Камера.
+        // =========================================================================
+
         private void btnBuildSurface_Click(object sender, EventArgs e)
         {
             try
@@ -362,6 +349,116 @@ namespace PolyhedronLab
                 canvas.Invalidate();
             }
             catch (Exception ex) { MessageBox.Show("Ошибка: " + ex.Message); }
+        }
+
+        private void CameraTimer_Tick(object sender, EventArgs e)
+        {
+            _cameraAngle += 2;
+            if (_cameraAngle > 360) _cameraAngle -= 360;
+            trbCameraAngle.Value = (int)_cameraAngle;
+            canvas.Invalidate();
+        }
+
+        private void btnRotateCamera_Click(object sender, EventArgs e)
+        {
+            _rotateCamera = !_rotateCamera;
+            if (_rotateCamera) _cameraTimer.Start();
+            else _cameraTimer.Stop();
+            lblStatus.Text = _rotateCamera ? "Камера вращается" : "Вращение остановлено";
+        }
+
+        private void btnApplyCam_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var p = ParseParams(txtParamsCam.Text);
+                Matrix4x4 op = Matrix4x4.Identity();
+                switch (cmbOpCam.SelectedIndex)
+                {
+                    case 0: Require(p, 3); op = Matrix4x4.Translate(p[0], p[1], p[2]); break;
+                    case 1: Require(p, 3); op = Matrix4x4.Scale(p[0], p[1], p[2]); break;
+                    case 2: Require(p, 1); op = Matrix4x4.RotateX(p[0]); break;
+                    case 3: Require(p, 1); op = Matrix4x4.RotateY(p[0]); break;
+                    case 4: Require(p, 1); op = Matrix4x4.RotateZ(p[0]); break;
+                }
+                _camPoly = _camPoly.Transformed(op);
+                lblStatus.Text = "Применено (Камера)";
+                canvas.Invalidate();
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+
+        private void cmbCamShape_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch (cmbCamShape.SelectedIndex)
+            {
+                case 0: _camPoly = PolyhedraFactory.Hexahedron(); break;
+                case 1: _camPoly = PolyhedraFactory.Tetrahedron(); break;
+                case 2: _camPoly = PolyhedraFactory.Octahedron(); break;
+                case 3: _camPoly = PolyhedraFactory.Icosahedron(); break;
+                case 4: _camPoly = PolyhedraFactory.Dodecahedron(); break;
+            }
+            canvas.Invalidate();
+        }
+
+        private void btnLoadCam_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Filter = "Wavefront OBJ (*.obj)|*.obj";
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    try { _camPoly = ObjParser.Load(ofd.FileName); canvas.Invalidate(); }
+                    catch (Exception ex) { MessageBox.Show(ex.Message); }
+                }
+            }
+        }
+
+        private void btnSaveCam_Click(object sender, EventArgs e)
+        {
+            if (_camPoly == null) return;
+            using (SaveFileDialog sfd = new SaveFileDialog())
+            {
+                sfd.Filter = "Wavefront OBJ (*.obj)|*.obj";
+                if (sfd.ShowDialog() == DialogResult.OK)
+                {
+                    try { ObjParser.Save(_camPoly, sfd.FileName); }
+                    catch (Exception ex) { MessageBox.Show(ex.Message); }
+                }
+            }
+        }
+
+        // =========================================================================
+        // ОБЩИЕ ОБРАБОТЧИКИ (ИНТЕРФЕЙС)
+        // =========================================================================
+
+        private void tabControl_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (tabControl.SelectedTab == tabSurface)
+            {
+                _renderer.CullBackFaces = true;
+                btnBuildSurface_Click(null, null);
+            }
+            else if (tabControl.SelectedTab == tabRotation)
+            {
+                _renderer.CullBackFaces = false;
+                btnBuildRotation_Click(null, null);
+            }
+            else if (tabControl.SelectedTab == tabCamera)
+            {
+                _renderer.CullBackFaces = true;
+                rbPerspective.Checked = true;
+                _cameraTimer.Start();
+                _rotateCamera = true;
+                canvas.Invalidate();
+            }
+            else
+            {
+                _renderer.CullBackFaces = true;
+                _cameraTimer.Stop();
+                _rotateCamera = false;
+                canvas.Invalidate();
+            }
         }
 
         private void ApplyOperation(ComboBox cmbOp, TextBox txtParams)
