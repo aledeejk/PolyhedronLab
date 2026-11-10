@@ -123,6 +123,80 @@ namespace PolyhedronLab
         }
 
         // =========================================================================
+        // ЛР8: КАМЕРА
+        // =========================================================================
+        public void DrawCamera(Graphics g, Polyhedron poly, int cx, int cy, double angle)
+        {
+            if (poly == null || poly.Vertices.Count == 0) return;
+
+            double baseScale = 70.0;
+            double cameraDist = 15.0;
+
+            // Вращаем мир вокруг Y и X
+            var view = Matrix4x4.RotateX(30) * Matrix4x4.RotateY(angle * 180 / Math.PI);
+
+            // Рисуем оси
+            DrawAxes(g, cx, cy, view, Math.Min(cx, cy) * 0.8);
+
+            var projected = new PointF[poly.Vertices.Count];
+            var viewCoords = new Point3D[poly.Vertices.Count];
+            var depths = new double[poly.Vertices.Count];
+
+            for (int i = 0; i < poly.Vertices.Count; i++)
+            {
+                var v = poly.Vertices[i].Apply(view);
+                viewCoords[i] = v;
+
+                if (PerspectiveMode)
+                {
+                    double zDist = cameraDist - v.Z;
+                    if (zDist < 0.1) zDist = 0.1;
+                    double pScale = cameraDist / zDist;
+                    projected[i] = new PointF((float)(cx + (v.X * pScale) * baseScale), (float)(cy - (v.Y * pScale) * baseScale));
+                    depths[i] = zDist;
+                }
+                else
+                {
+                    projected[i] = new PointF((float)(cx + v.X * baseScale), (float)(cy - v.Y * baseScale));
+                    depths[i] = v.Z;
+                }
+            }
+
+            var facesToDraw = new List<(Face face, double avgDepth)>();
+
+            foreach (var face in poly.Faces)
+            {
+                if (face.Indices.Count < 3) continue;
+
+                // ОТСЕЧЕНИЕ ЗАДНИХ ГРАНЕЙ
+                var p0 = viewCoords[face.Indices[0]];
+                var p1 = viewCoords[face.Indices[1]];
+                var p2 = viewCoords[face.Indices[2]];
+                var normal = Point3D.Cross(p1 - p0, p2 - p0).Normalized();
+
+                // Если нормаль смотрит ОТ нас, это задняя грань — пропускаем
+                if (Point3D.Dot(normal, new Point3D(0, 0, -1)) > 0) continue;
+
+                double depthSum = 0;
+                foreach (var idx in face.Indices) depthSum += depths[idx];
+                facesToDraw.Add((face, depthSum / face.Indices.Count));
+            }
+
+            facesToDraw.Sort((a, b) => a.avgDepth.CompareTo(b.avgDepth));
+
+            foreach (var (face, _) in facesToDraw)
+            {
+                var pts = new PointF[face.Indices.Count];
+                for (int i = 0; i < face.Indices.Count; i++)
+                    pts[i] = projected[face.Indices[i]];
+                using (var brush = new SolidBrush(Color.FromArgb(200, Color.SteelBlue)))
+                    g.FillPolygon(brush, pts);
+                using (var pen = new Pen(Color.DarkBlue, 1.0f))
+                    g.DrawPolygon(pen, pts);
+            }
+        }
+
+        // =========================================================================
         // ЛР8: ОТСЕЧЕНИЕ
         // =========================================================================
         public void DrawCulled(Graphics g, Polyhedron poly, int cx, int cy, Point3D viewVector)
@@ -204,10 +278,15 @@ namespace PolyhedronLab
             double baseScale = 100.0;
             double cameraDist = 15.0;
 
-            var allProjected = new List<PointF[]>();
+            Color[] colors = { Color.SteelBlue, Color.LightGreen, Color.Orange, Color.Pink };
 
-            foreach (var poly in polys)
+            var faceContours = new List<(PointF[] pts, double[] depths, Color color)>();
+
+            for (int pIndex = 0; pIndex < polys.Count; pIndex++)
             {
+                var poly = polys[pIndex];
+                Color objectColor = colors[pIndex % colors.Length];
+
                 var projected = new PointF[poly.Vertices.Count];
                 var viewCoords = new Point3D[poly.Vertices.Count];
                 var depths = new double[poly.Vertices.Count];
@@ -232,18 +311,24 @@ namespace PolyhedronLab
                     }
                 }
 
-                allProjected.Add(projected);
-
                 foreach (var face in poly.Faces)
                 {
                     if (face.Indices.Count < 3) continue;
 
-                    // ОТСЕЧЕНИЕ ЗАДНИХ ГРАНЕЙ
                     var p0 = viewCoords[face.Indices[0]];
                     var p1 = viewCoords[face.Indices[1]];
                     var p2 = viewCoords[face.Indices[2]];
                     var normal = Point3D.Cross(p1 - p0, p2 - p0).Normalized();
                     if (Point3D.Dot(normal, new Point3D(0, 0, -1)) > 0) continue;
+
+                    var facePts = new PointF[face.Indices.Count];
+                    var faceDepths = new double[face.Indices.Count];
+                    for (int i = 0; i < face.Indices.Count; i++)
+                    {
+                        facePts[i] = projected[face.Indices[i]];
+                        faceDepths[i] = depths[face.Indices[i]];
+                    }
+                    faceContours.Add((facePts, faceDepths, objectColor));
 
                     for (int i = 1; i < face.Indices.Count - 1; i++)
                     {
@@ -253,11 +338,12 @@ namespace PolyhedronLab
 
                         RasterizeTriangle(projected[v1], projected[v2], projected[v3],
                                           depths[v1], depths[v2], depths[v3],
-                                          zBuffer, colorBuffer, width, height, Color.SteelBlue);
+                                          zBuffer, colorBuffer, width, height, objectColor);
                     }
                 }
             }
 
+            // Выводим Z-буфер
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
@@ -270,28 +356,40 @@ namespace PolyhedronLab
                 }
             }
 
-            // Отрисовка рёбер поверх Z-буфера
-            for (int p = 0; p < polys.Count; p++)
+            // Рисуем рёбра с проверкой Z
+            foreach (var (pts, depthPts, color) in faceContours)
             {
-                var poly = polys[p];
-                var projected = allProjected[p];
-
-                foreach (var face in poly.Faces)
+                for (int i = 0; i < pts.Length; i++)
                 {
-                    if (face.Indices.Count < 3) continue;
+                    int next = (i + 1) % pts.Length;
+                    PointF p1 = pts[i];
+                    PointF p2 = pts[next];
+                    double z1 = depthPts[i];
+                    double z2 = depthPts[next];
 
-                    var p0 = poly.Vertices[face.Indices[0]].Apply(view);
-                    var p1 = poly.Vertices[face.Indices[1]].Apply(view);
-                    var p2 = poly.Vertices[face.Indices[2]].Apply(view);
-                    var normal = Point3D.Cross(p1 - p0, p2 - p0).Normalized();
-                    if (Point3D.Dot(normal, new Point3D(0, 0, -1)) > 0) continue;
+                    int steps = (int)Math.Max(Math.Abs(p2.X - p1.X), Math.Abs(p2.Y - p1.Y));
+                    if (steps < 1) steps = 1;
 
-                    var pts = new PointF[face.Indices.Count];
-                    for (int i = 0; i < face.Indices.Count; i++)
-                        pts[i] = projected[face.Indices[i]];
+                    for (int s = 0; s <= steps; s++)
+                    {
+                        float t = (float)s / steps;
+                        float x = p1.X + (p2.X - p1.X) * t;
+                        float y = p1.Y + (p2.Y - p1.Y) * t;
+                        int ix = (int)x;
+                        int iy = (int)y;
 
-                    using (var pen = new Pen(Color.DarkBlue, 1.0f))
-                        g.DrawPolygon(pen, pts);
+                        if (ix >= 0 && ix < width && iy >= 0 && iy < height)
+                        {
+                            int index = iy * width + ix;
+                            double lineZ = z1 + (z2 - z1) * t;
+
+                            if (lineZ <= zBuffer[index] + 0.1)
+                            {
+                                using (var brush = new SolidBrush(Color.Black))
+                                    g.FillRectangle(brush, ix, iy, 1, 1);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -335,55 +433,8 @@ namespace PolyhedronLab
         }
 
         // =========================================================================
-        // ЛР8: КАМЕРА
+        // ОСИ
         // =========================================================================
-        public void DrawCamera(Graphics g, Polyhedron poly, int cx, int cy, double angle)
-        {
-            if (poly == null || poly.Vertices.Count == 0) return;
-
-            var view = Matrix4x4.RotateY(angle * 180 / Math.PI);
-            double baseScale = 100.0;
-            double cameraDist = 15.0;
-
-            var projected = new PointF[poly.Vertices.Count];
-            var depths = new double[poly.Vertices.Count];
-
-            for (int i = 0; i < poly.Vertices.Count; i++)
-            {
-                var v = poly.Vertices[i].Apply(view);
-
-                double zDist = cameraDist - v.Z;
-                if (zDist < 0.1) zDist = 0.1;
-                double pScale = cameraDist / zDist;
-
-                projected[i] = new PointF((float)(cx + (v.X * pScale) * baseScale), (float)(cy - (v.Y * pScale) * baseScale));
-                depths[i] = zDist;
-            }
-
-            var facesToDraw = new List<(Face face, double avgDepth)>();
-
-            foreach (var face in poly.Faces)
-            {
-                if (face.Indices.Count < 3) continue;
-                double depthSum = 0;
-                foreach (var idx in face.Indices) depthSum += depths[idx];
-                facesToDraw.Add((face, depthSum / face.Indices.Count));
-            }
-
-            facesToDraw.Sort((a, b) => a.avgDepth.CompareTo(b.avgDepth));
-
-            foreach (var (face, _) in facesToDraw)
-            {
-                var pts = new PointF[face.Indices.Count];
-                for (int i = 0; i < face.Indices.Count; i++)
-                    pts[i] = projected[face.Indices[i]];
-                using (var brush = new SolidBrush(Color.FromArgb(200, Color.SteelBlue)))
-                    g.FillPolygon(brush, pts);
-                using (var pen = new Pen(Color.DarkBlue, 1.0f))
-                    g.DrawPolygon(pen, pts);
-            }
-        }
-
         private void DrawAxes(Graphics g, int cx, int cy, Matrix4x4 view, double maxPixelLength)
         {
             var axisX = new Point3D(1, 0, 0);

@@ -14,17 +14,17 @@ namespace PolyhedronLab
         private Matrix4x4 _modelMatrix = Matrix4x4.Identity();
         private Stack<Matrix4x4> _matrixHistory = new Stack<Matrix4x4>();
 
-        // ЛР8 (Z-буфер)
+        // Поля для ЛР8 (Z-буфер)
         private Polyhedron _zBufferPoly1;
         private Polyhedron _zBufferPoly2;
         private bool _showSecondZBufferObject = false;
 
-        // ЛР8 (Камера)
+        // Поля для камеры
         private bool _rotateCamera = false;
         private System.Windows.Forms.Timer _cameraTimer;
         private double _cameraAngle = 0;
 
-        // ЛР8 (Отсечение)
+        // Вектор обзора для отсечения
         private Point3D _viewVector = new Point3D(0, 0, -1);
 
         public Form1()
@@ -177,6 +177,18 @@ namespace PolyhedronLab
             canvas.Invalidate();
         }
 
+        private void cmbZBufferShape2_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch (cmbZBufferShape2.SelectedIndex)
+            {
+                case 0: _zBufferPoly2 = PolyhedraFactory.Hexahedron(); break;
+                case 1: _zBufferPoly2 = PolyhedraFactory.Octahedron(); break;
+                case 2: _zBufferPoly2 = PolyhedraFactory.Tetrahedron(); break;
+            }
+            _zBufferPoly2 = _zBufferPoly2.Transformed(Matrix4x4.Translate(2.5, 1.0, 0));
+            canvas.Invalidate();
+        }
+
         private void btnApplyZBuffer_Click(object sender, EventArgs e)
         {
             try
@@ -191,8 +203,14 @@ namespace PolyhedronLab
                     case 3: Require(p, 1); op = Matrix4x4.RotateY(p[0]); break;
                     case 4: Require(p, 1); op = Matrix4x4.RotateZ(p[0]); break;
                 }
-                _zBufferPoly1 = _zBufferPoly1.Transformed(op);
-                if (_showSecondZBufferObject) _zBufferPoly2 = _zBufferPoly2.Transformed(op);
+
+                // Применяем в зависимости от выбора цели
+                if (cmbZBufferTarget.SelectedIndex == 0 || cmbZBufferTarget.SelectedIndex == 1)
+                    _zBufferPoly1 = _zBufferPoly1.Transformed(op);
+
+                if (_showSecondZBufferObject && (cmbZBufferTarget.SelectedIndex == 0 || cmbZBufferTarget.SelectedIndex == 2))
+                    _zBufferPoly2 = _zBufferPoly2.Transformed(op);
+
                 lblStatus.Text = "Применено (Z-буфер)";
                 canvas.Invalidate();
             }

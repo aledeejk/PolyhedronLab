@@ -17,7 +17,7 @@
             lblStatus = new Label();
             tabControl = new TabControl();
 
-            // ================= ВКЛАДКА 1: МНОГОГРАННИКИ =================
+            // Вкладка 1
             tabMain = new TabPage();
             lblShape = new Label();
             cmbShape = new ComboBox();
@@ -31,7 +31,7 @@
             btnReset = new Button();
             btnUndo = new Button();
 
-            // ================= ВКЛАДКА 2: ВРАЩЕНИЕ =================
+            // Вкладка 2
             tabRotation = new TabPage();
             lblGeneratrix = new Label();
             txtGeneratrix = new TextBox();
@@ -48,7 +48,7 @@
             btnResetRot = new Button();
             btnUndoRot = new Button();
 
-            // ================= ВКЛАДКА 3: ГРАФИК =================
+            // Вкладка 3
             tabSurface = new TabPage();
             cmbFunction = new ComboBox();
             txtRange = new TextBox();
@@ -64,7 +64,7 @@
             btnResetSurf = new Button();
             btnUndoSurf = new Button();
 
-            // ================= ВКЛАДКА 4: ОТСЕЧЕНИЕ =================
+            // Вкладка 4
             tabCulling = new TabPage();
             lblCullingInfo = new Label();
             btnTestCulling = new Button();
@@ -78,20 +78,22 @@
             btnResetCull = new Button();
             btnUndoCull = new Button();
 
-            // ================= ВКЛАДКА 5: Z-БУФЕР =================
+            // Вкладка 5 (Z-буфер)
             tabZBuffer = new TabPage();
             lblZBufferInfo = new Label();
             cmbZBufferShape = new ComboBox();
+            cmbZBufferShape2 = new ComboBox();
             btnAddSecondObject = new Button();
             lblOpZBuffer = new Label();
             cmbOpZBuffer = new ComboBox();
+            cmbZBufferTarget = new ComboBox(); // <--- НОВЫЙ
             lblParamsZBuffer = new Label();
             txtParamsZBuffer = new TextBox();
             btnApplyZBuffer = new Button();
             btnResetZBuffer = new Button();
             btnUndoZBuffer = new Button();
 
-            // ================= ВКЛАДКА 6: КАМЕРА =================
+            // Вкладка 6
             tabCamera = new TabPage();
             lblCameraInfo = new Label();
             btnRotateCamera = new Button();
@@ -104,7 +106,7 @@
             btnResetCam = new Button();
             btnUndoCam = new Button();
 
-            // ================= ОБЩИЕ ЭЛЕМЕНТЫ =================
+            // Общие
             grpProjection = new GroupBox();
             rbAxonometric = new RadioButton();
             rbPerspective = new RadioButton();
@@ -160,7 +162,7 @@
             tabControl.Size = new Size(300, 626);
             tabControl.TabIndex = 1;
 
-            // ================= ВКЛАДКА 1: МНОГОГРАННИКИ =================
+            // ================= ВКЛАДКА 1 =================
             tabMain.Controls.Add(lblShape);
             tabMain.Controls.Add(cmbShape);
             tabMain.Controls.Add(btnLoad);
@@ -193,7 +195,7 @@
             btnReset.Location = new Point(150, 244); btnReset.Size = new Size(130, 40); btnReset.Text = "Сброс"; btnReset.Click += btnReset_Click;
             btnUndo.Location = new Point(10, 294); btnUndo.Size = new Size(270, 40); btnUndo.Text = "Отменить последнее действие"; btnUndo.Click += btnUndo_Click;
 
-            // ================= ВКЛАДКА 2: ВРАЩЕНИЕ =================
+            // ================= ВКЛАДКА 2 =================
             tabRotation.Controls.Add(lblGeneratrix);
             tabRotation.Controls.Add(txtGeneratrix);
             tabRotation.Controls.Add(cmbAxis);
@@ -230,7 +232,7 @@
             btnResetRot.Location = new Point(150, 420); btnResetRot.Size = new Size(130, 40); btnResetRot.Text = "Сброс"; btnResetRot.Click += btnReset_Click;
             btnUndoRot.Location = new Point(10, 470); btnUndoRot.Size = new Size(270, 40); btnUndoRot.Text = "Отменить последнее действие"; btnUndoRot.Click += btnUndo_Click;
 
-            // ================= ВКЛАДКА 3: ГРАФИК =================
+            // ================= ВКЛАДКА 3 =================
             tabSurface.Controls.Add(cmbFunction);
             tabSurface.Controls.Add(txtRange);
             tabSurface.Controls.Add(txtDivs);
@@ -265,7 +267,7 @@
             btnResetSurf.Location = new Point(150, 380); btnResetSurf.Size = new Size(130, 40); btnResetSurf.Text = "Сброс"; btnResetSurf.Click += btnReset_Click;
             btnUndoSurf.Location = new Point(10, 430); btnUndoSurf.Size = new Size(270, 40); btnUndoSurf.Text = "Отменить последнее действие"; btnUndoSurf.Click += btnUndo_Click;
 
-            // ================= ВКЛАДКА 4: ОТСЕЧЕНИЕ =================
+            // ================= ВКЛАДКА 4 =================
             tabCulling.Controls.Add(lblCullingInfo);
             tabCulling.Controls.Add(btnTestCulling);
             tabCulling.Controls.Add(txtViewVector);
@@ -300,9 +302,11 @@
             // ================= ВКЛАДКА 5: Z-БУФЕР =================
             tabZBuffer.Controls.Add(lblZBufferInfo);
             tabZBuffer.Controls.Add(cmbZBufferShape);
+            tabZBuffer.Controls.Add(cmbZBufferShape2);
             tabZBuffer.Controls.Add(btnAddSecondObject);
             tabZBuffer.Controls.Add(lblOpZBuffer);
             tabZBuffer.Controls.Add(cmbOpZBuffer);
+            tabZBuffer.Controls.Add(cmbZBufferTarget);
             tabZBuffer.Controls.Add(lblParamsZBuffer);
             tabZBuffer.Controls.Add(txtParamsZBuffer);
             tabZBuffer.Controls.Add(btnApplyZBuffer);
@@ -316,20 +320,30 @@
             lblZBufferInfo.Location = new Point(10, 10); lblZBufferInfo.Size = new Size(270, 40); lblZBufferInfo.Text = "Перекрытие двух объектов.";
             cmbZBufferShape.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbZBufferShape.Items.AddRange(new object[] { "Куб", "Октаэдр", "Тетраэдр" });
-            cmbZBufferShape.Location = new Point(10, 55); cmbZBufferShape.Size = new Size(150, 28); cmbZBufferShape.SelectedIndexChanged += cmbZBufferShape_SelectedIndexChanged;
-            btnAddSecondObject.Location = new Point(170, 55); btnAddSecondObject.Size = new Size(120, 30); btnAddSecondObject.Text = "Второй объект"; btnAddSecondObject.Click += btnAddSecondObject_Click;
+            cmbZBufferShape.Location = new Point(10, 55); cmbZBufferShape.Size = new Size(90, 28); cmbZBufferShape.SelectedIndexChanged += cmbZBufferShape_SelectedIndexChanged;
+            cmbZBufferShape2.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbZBufferShape2.Items.AddRange(new object[] { "Куб", "Октаэдр", "Тетраэдр" });
+            cmbZBufferShape2.Location = new Point(105, 55); cmbZBufferShape2.Size = new Size(90, 28); cmbZBufferShape2.SelectedIndexChanged += cmbZBufferShape2_SelectedIndexChanged;
+            btnAddSecondObject.Location = new Point(200, 55); btnAddSecondObject.Size = new Size(90, 30); btnAddSecondObject.Text = "Доб/уб"; btnAddSecondObject.Click += btnAddSecondObject_Click;
 
             lblOpZBuffer.Location = new Point(10, 110); lblOpZBuffer.Size = new Size(150, 25); lblOpZBuffer.Text = "Преобразование:";
             cmbOpZBuffer.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbOpZBuffer.Items.AddRange(new object[] { "Смещение (dx,dy,dz)", "Масштаб (sx,sy,sz)", "Поворот вокруг X", "Поворот вокруг Y", "Поворот вокруг Z" });
             cmbOpZBuffer.Location = new Point(10, 138); cmbOpZBuffer.Size = new Size(285, 28);
-            lblParamsZBuffer.Location = new Point(10, 180); lblParamsZBuffer.Size = new Size(270, 25); lblParamsZBuffer.Text = "Параметры (через запятую):";
-            txtParamsZBuffer.Location = new Point(10, 208); txtParamsZBuffer.Size = new Size(285, 27); txtParamsZBuffer.Text = "0,0,0";
-            btnApplyZBuffer.Location = new Point(10, 250); btnApplyZBuffer.Size = new Size(130, 40); btnApplyZBuffer.Text = "Применить"; btnApplyZBuffer.Click += btnApplyZBuffer_Click;
-            btnResetZBuffer.Location = new Point(150, 250); btnResetZBuffer.Size = new Size(130, 40); btnResetZBuffer.Text = "Сброс"; btnResetZBuffer.Click += btnReset_Click;
-            btnUndoZBuffer.Location = new Point(10, 300); btnUndoZBuffer.Size = new Size(270, 40); btnUndoZBuffer.Text = "Отменить последнее действие"; btnUndoZBuffer.Click += btnUndo_Click;
 
-            // ================= ВКЛАДКА 6: КАМЕРА =================
+            // ComboBox для выбора цели
+            cmbZBufferTarget.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbZBufferTarget.Items.AddRange(new object[] { "Оба объекта", "Только первый", "Только второй" });
+            cmbZBufferTarget.Location = new Point(10, 175); cmbZBufferTarget.Size = new Size(285, 28);
+            cmbZBufferTarget.SelectedIndex = 0;
+
+            lblParamsZBuffer.Location = new Point(10, 215); lblParamsZBuffer.Size = new Size(270, 25); lblParamsZBuffer.Text = "Параметры (через запятую):";
+            txtParamsZBuffer.Location = new Point(10, 243); txtParamsZBuffer.Size = new Size(285, 27); txtParamsZBuffer.Text = "0,0,0";
+            btnApplyZBuffer.Location = new Point(10, 285); btnApplyZBuffer.Size = new Size(130, 40); btnApplyZBuffer.Text = "Применить"; btnApplyZBuffer.Click += btnApplyZBuffer_Click;
+            btnResetZBuffer.Location = new Point(150, 285); btnResetZBuffer.Size = new Size(130, 40); btnResetZBuffer.Text = "Сброс"; btnResetZBuffer.Click += btnReset_Click;
+            btnUndoZBuffer.Location = new Point(10, 335); btnUndoZBuffer.Size = new Size(270, 40); btnUndoZBuffer.Text = "Отменить последнее действие"; btnUndoZBuffer.Click += btnUndo_Click;
+
+            // ================= ВКЛАДКА 6 =================
             tabCamera.Controls.Add(lblCameraInfo);
             tabCamera.Controls.Add(btnRotateCamera);
             tabCamera.Controls.Add(trbCameraAngle);
@@ -359,7 +373,7 @@
             btnResetCam.Location = new Point(150, 290); btnResetCam.Size = new Size(130, 40); btnResetCam.Text = "Сброс"; btnResetCam.Click += btnReset_Click;
             btnUndoCam.Location = new Point(10, 340); btnUndoCam.Size = new Size(270, 40); btnUndoCam.Text = "Отменить последнее действие"; btnUndoCam.Click += btnUndo_Click;
 
-            // ================= ОБЩИЕ ЭЛЕМЕНТЫ =================
+            // ================= ОБЩИЕ =================
             grpProjection.Controls.Add(rbAxonometric);
             grpProjection.Controls.Add(rbPerspective);
             grpProjection.Location = new Point(14, 696);
@@ -464,9 +478,11 @@
         private TabPage tabZBuffer;
         private Label lblZBufferInfo;
         private ComboBox cmbZBufferShape;
+        private ComboBox cmbZBufferShape2;
         private Button btnAddSecondObject;
         private Label lblOpZBuffer;
         private ComboBox cmbOpZBuffer;
+        private ComboBox cmbZBufferTarget; // <--- НОВЫЙ
         private Label lblParamsZBuffer;
         private TextBox txtParamsZBuffer;
         private Button btnApplyZBuffer;

@@ -57,6 +57,7 @@ namespace PolyhedronLab
         public static Polyhedron Octahedron()
         {
             var p = new Polyhedron();
+            double scale = 1.5;
             p.Vertices.AddRange(new[]
             {
                 new Point3D( 1,  0,  0), new Point3D(-1,  0,  0),
