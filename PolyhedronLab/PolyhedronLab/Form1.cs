@@ -28,25 +28,6 @@ namespace PolyhedronLab
             this.tabControl.SelectedIndexChanged += new System.EventHandler(this.tabControl_SelectedIndexChanged);
         }
 
-        // --- СМЕНА ВКЛАДОК (БЕЗ ИЗМЕНЕНИЯ РАКУРСА) ---
-        private void tabControl_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (tabControl.SelectedTab == tabSurface)
-            {
-                btnBuildSurface_Click(null, null); // Просто строим график
-            }
-            else if (tabControl.SelectedTab == tabRotation)
-            {
-                btnBuildRotation_Click(null, null); // Просто строим фигуру
-            }
-            else
-            {
-                _poly = PolyhedraFactory.Create(cmbShape.SelectedIndex);
-                _modelMatrix = Matrix4x4.Identity();
-                canvas.Invalidate();
-            }
-        }
-
         private void canvas_Resize(object sender, EventArgs e) => canvas.Invalidate();
 
         private void canvas_Paint(object sender, PaintEventArgs e)
@@ -59,7 +40,17 @@ namespace PolyhedronLab
             _renderer.Draw(e.Graphics, display, canvas.Width / 2, canvas.Height / 2);
         }
 
-        // --- ЗАГРУЗКА / СОХРАНЕНИЕ (ПУНКТ 1) ---
+        // =========================================================================
+        // ДЕЕВА АЛЕКСАНДРА
+        // =========================================================================
+
+        private void cmbShape_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            _poly = PolyhedraFactory.Create(cmbShape.SelectedIndex);
+            lblStatus.Text = $"Загружен многогранник: {cmbShape.Text}";
+            canvas.Invalidate();
+        }
+
         private void btnLoad_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog ofd = new OpenFileDialog())
@@ -99,7 +90,48 @@ namespace PolyhedronLab
             }
         }
 
-        // --- ГРАФИК ФУНКЦИИ (ПУНКТ 3) ---
+        // =========================================================================
+        // БОЧАРОВА КАТЕРИНА
+        // =========================================================================
+
+        private void btnBuildRotation_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(txtGeneratrix.Text)) txtGeneratrix.Text = "1,0,0; 2,0,0; 2,0,1; 1,0,1";
+
+                var points = new List<Point3D>();
+                var segments = txtGeneratrix.Text.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < segments.Length; i++)
+                {
+                    var coords = segments[i].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (coords.Length == 3)
+                    {
+                        points.Add(new Point3D(
+                            double.Parse(coords[0].Trim(), CultureInfo.InvariantCulture),
+                            double.Parse(coords[1].Trim(), CultureInfo.InvariantCulture),
+                            double.Parse(coords[2].Trim(), CultureInfo.InvariantCulture)));
+                    }
+                }
+
+                if (points.Count < 2) throw new Exception("Образующая должна содержать хотя бы 2 точки.");
+
+                int axis = cmbAxis.SelectedIndex;
+                int divs = int.Parse(txtSegments.Text);
+
+                _poly = PolyhedraFactory.CreateRotationFigure(points, axis, divs);
+                _modelMatrix = Matrix4x4.Identity();
+                _matrixHistory.Clear();
+                lblStatus.Text = "Построена фигура вращения";
+                canvas.Invalidate();
+            }
+            catch (Exception ex) { MessageBox.Show("Ошибка: " + ex.Message); }
+        }
+
+        // =========================================================================
+        // СИДОРЧИК АЛИСА
+        // =========================================================================
+
         private void btnBuildSurface_Click(object sender, EventArgs e)
         {
             try
@@ -135,47 +167,90 @@ namespace PolyhedronLab
             catch (Exception ex) { MessageBox.Show("Ошибка: " + ex.Message); }
         }
 
-        // --- ФИГУРА ВРАЩЕНИЯ (ПУНКТ 2) ---
-        private void btnBuildRotation_Click(object sender, EventArgs e)
+        // =========================================================================
+        // Вызов всех преобразований.
+        // =========================================================================
+
+        private void ApplyOperation(ComboBox cmbOp, TextBox txtParams)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(txtGeneratrix.Text)) txtGeneratrix.Text = "1,0,0; 2,0,0; 2,0,1; 1,0,1";
+                Matrix4x4 op = Matrix4x4.Identity();
+                bool applyLocally = false;
+                if (cmbOp.SelectedIndex != 9) _renderer.ShowAxisLine = false;
 
-                var points = new List<Point3D>();
-                var segments = txtGeneratrix.Text.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-                for (int i = 0; i < segments.Length; i++)
+                if (cmbOp.SelectedIndex == 10)
                 {
-                    var coords = segments[i].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                    if (coords.Length == 3)
+                    // --- ДЕЕВА АЛЕКСАНДРА: Отражение ---
+                    var s = txtParams.Text.Trim().ToUpper();
+                    if (s.Length != 1 || "XYZ".IndexOf(s[0]) < 0) throw new ArgumentException("Укажите X, Y или Z");
+                    op = Matrix4x4.ReflectPlane(s[0]);
+                }
+                else
+                {
+                    var p = ParseParams(txtParams.Text);
+                    switch (cmbOp.SelectedIndex)
                     {
-                        points.Add(new Point3D(
-                            double.Parse(coords[0].Trim(), CultureInfo.InvariantCulture),
-                            double.Parse(coords[1].Trim(), CultureInfo.InvariantCulture),
-                            double.Parse(coords[2].Trim(), CultureInfo.InvariantCulture)));
+                        // --- БОЧАРОВА КАТЕРИНА: Смещение, Масштаб, Повороты осей ---
+                        case 0: Require(p, 3); op = Matrix4x4.Translate(p[0], p[1], p[2]); break;
+                        case 1: Require(p, 3); if (p[0] == 0 || p[1] == 0 || p[2] == 0) throw new Exception("Масштаб не может быть 0."); op = Matrix4x4.Scale(p[0], p[1], p[2]); break;
+                        case 2: Require(p, 1); if (p[0] == 0) throw new Exception("Масштаб не может быть 0."); op = Matrix4x4.ScaleAboutCenter(_poly.Center, p[0]); applyLocally = true; break;
+                        case 3: Require(p, 1); op = Matrix4x4.RotateX(p[0]); break;
+                        case 4: Require(p, 1); op = Matrix4x4.RotateY(p[0]); break;
+                        case 5: Require(p, 1); op = Matrix4x4.RotateZ(p[0]); break;
+
+                        // --- СИДОРЧИК АЛИСА: Повороты через центр и вокруг произвольной прямой ---
+                        case 6: Require(p, 1); op = Matrix4x4.RotateAroundLine(_poly.Center + new Point3D(-1, 0, 0), _poly.Center + new Point3D(1, 0, 0), p[0]); applyLocally = true; break;
+                        case 7: Require(p, 1); op = Matrix4x4.RotateAroundLine(_poly.Center + new Point3D(0, -1, 0), _poly.Center + new Point3D(0, 1, 0), p[0]); applyLocally = true; break;
+                        case 8: Require(p, 1); op = Matrix4x4.RotateAroundLine(_poly.Center + new Point3D(0, 0, -1), _poly.Center + new Point3D(0, 0, 1), p[0]); applyLocally = true; break;
+                        case 9:
+                            Require(p, 7);
+                            _renderer.ShowAxisLine = true;
+                            _renderer.AxisPoint1 = new Point3D(p[0], p[1], p[2]);
+                            _renderer.AxisPoint2 = new Point3D(p[3], p[4], p[5]);
+                            op = Matrix4x4.RotateAroundLine(_renderer.AxisPoint1, _renderer.AxisPoint2, p[6]);
+                            break;
                     }
                 }
 
-                if (points.Count < 2) throw new Exception("Образующая должна содержать хотя бы 2 точки.");
+                _matrixHistory.Push(_modelMatrix);
+                _modelMatrix = applyLocally ? _modelMatrix * op : op * _modelMatrix;
 
-                int axis = cmbAxis.SelectedIndex;
-                int divs = int.Parse(txtSegments.Text);
-
-                _poly = PolyhedraFactory.CreateRotationFigure(points, axis, divs);
-                _modelMatrix = Matrix4x4.Identity();
-                _matrixHistory.Clear();
-                lblStatus.Text = "Построена фигура вращения";
+                if (_renderer.ShowAxisLine && cmbOp.SelectedIndex != 9)
+                {
+                    _renderer.AxisPoint1 = _renderer.AxisPoint1.Apply(_modelMatrix);
+                    _renderer.AxisPoint2 = _renderer.AxisPoint2.Apply(_modelMatrix);
+                }
+                lblStatus.Text = $"Применено: {cmbOp.Text}";
                 canvas.Invalidate();
             }
-            catch (Exception ex) { MessageBox.Show("Ошибка: " + ex.Message); }
+            catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
-        // --- СТАРЫЕ ОБРАБОТЧИКИ (ЛР6) ---
-        private void cmbShape_SelectedIndexChanged(object sender, EventArgs e)
+        private void btnApply_Click(object sender, EventArgs e) => ApplyOperation(cmbOp, txtParams);
+        private void btnApplyRot_Click(object sender, EventArgs e) => ApplyOperation(cmbOpRot, txtParamsRot);
+        private void btnApplySurf_Click(object sender, EventArgs e) => ApplyOperation(cmbOpSurf, txtParamsSurf);
+
+        // =========================================================================
+        // ОБЩИЕ ОБРАБОТЧИКИ ИНТЕРФЕЙСА
+        // =========================================================================
+
+        private void tabControl_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _poly = PolyhedraFactory.Create(cmbShape.SelectedIndex);
-            lblStatus.Text = $"Загружен многогранник: {cmbShape.Text}";
-            canvas.Invalidate();
+            if (tabControl.SelectedTab == tabSurface)
+            {
+                btnBuildSurface_Click(null, null);
+            }
+            else if (tabControl.SelectedTab == tabRotation)
+            {
+                btnBuildRotation_Click(null, null);
+            }
+            else
+            {
+                _poly = PolyhedraFactory.Create(cmbShape.SelectedIndex);
+                _modelMatrix = Matrix4x4.Identity();
+                canvas.Invalidate();
+            }
         }
 
         private void btnReset_Click(object sender, EventArgs e)
@@ -211,62 +286,6 @@ namespace PolyhedronLab
             lblStatus.Text = chkEdgesOnly.Checked ? "Режим каркаса" : "Режим заливки";
             canvas.Invalidate();
         }
-
-        private void ApplyOperation(ComboBox cmbOp, TextBox txtParams)
-        {
-            try
-            {
-                Matrix4x4 op = Matrix4x4.Identity();
-                bool applyLocally = false;
-                if (cmbOp.SelectedIndex != 9) _renderer.ShowAxisLine = false;
-
-                if (cmbOp.SelectedIndex == 10)
-                {
-                    var s = txtParams.Text.Trim().ToUpper();
-                    if (s.Length != 1 || "XYZ".IndexOf(s[0]) < 0) throw new ArgumentException("Укажите X, Y или Z");
-                    op = Matrix4x4.ReflectPlane(s[0]);
-                }
-                else
-                {
-                    var p = ParseParams(txtParams.Text);
-                    switch (cmbOp.SelectedIndex)
-                    {
-                        case 0: Require(p, 3); op = Matrix4x4.Translate(p[0], p[1], p[2]); break;
-                        case 1: Require(p, 3); if (p[0] == 0 || p[1] == 0 || p[2] == 0) throw new Exception("Масштаб не может быть 0."); op = Matrix4x4.Scale(p[0], p[1], p[2]); break;
-                        case 2: Require(p, 1); if (p[0] == 0) throw new Exception("Масштаб не может быть 0."); op = Matrix4x4.ScaleAboutCenter(_poly.Center, p[0]); applyLocally = true; break;
-                        case 3: Require(p, 1); op = Matrix4x4.RotateX(p[0]); break;
-                        case 4: Require(p, 1); op = Matrix4x4.RotateY(p[0]); break;
-                        case 5: Require(p, 1); op = Matrix4x4.RotateZ(p[0]); break;
-                        case 6: Require(p, 1); op = Matrix4x4.RotateAroundLine(_poly.Center + new Point3D(-1, 0, 0), _poly.Center + new Point3D(1, 0, 0), p[0]); applyLocally = true; break;
-                        case 7: Require(p, 1); op = Matrix4x4.RotateAroundLine(_poly.Center + new Point3D(0, -1, 0), _poly.Center + new Point3D(0, 1, 0), p[0]); applyLocally = true; break;
-                        case 8: Require(p, 1); op = Matrix4x4.RotateAroundLine(_poly.Center + new Point3D(0, 0, -1), _poly.Center + new Point3D(0, 0, 1), p[0]); applyLocally = true; break;
-                        case 9:
-                            Require(p, 7);
-                            _renderer.ShowAxisLine = true;
-                            _renderer.AxisPoint1 = new Point3D(p[0], p[1], p[2]);
-                            _renderer.AxisPoint2 = new Point3D(p[3], p[4], p[5]);
-                            op = Matrix4x4.RotateAroundLine(_renderer.AxisPoint1, _renderer.AxisPoint2, p[6]);
-                            break;
-                    }
-                }
-
-                _matrixHistory.Push(_modelMatrix);
-                _modelMatrix = applyLocally ? _modelMatrix * op : op * _modelMatrix;
-
-                if (_renderer.ShowAxisLine && cmbOp.SelectedIndex != 9)
-                {
-                    _renderer.AxisPoint1 = _renderer.AxisPoint1.Apply(_modelMatrix);
-                    _renderer.AxisPoint2 = _renderer.AxisPoint2.Apply(_modelMatrix);
-                }
-                lblStatus.Text = $"Применено: {cmbOp.Text}";
-                canvas.Invalidate();
-            }
-            catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
-        }
-
-        private void btnApply_Click(object sender, EventArgs e) => ApplyOperation(cmbOp, txtParams);
-        private void btnApplyRot_Click(object sender, EventArgs e) => ApplyOperation(cmbOpRot, txtParamsRot);
-        private void btnApplySurf_Click(object sender, EventArgs e) => ApplyOperation(cmbOpSurf, txtParamsSurf);
 
         private double[] ParseParams(string text)
         {
