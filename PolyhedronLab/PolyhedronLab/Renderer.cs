@@ -44,21 +44,21 @@ namespace PolyhedronLab
 
                 if (PerspectiveMode)
                 {
-                    double zDist = v.Z + cameraDist;
+                    double zDist = cameraDist - v.Z;
                     if (zDist < 0.1) zDist = 0.1;
                     double perspectiveScale = cameraDist / zDist;
                     double sx = cx + (v.X * perspectiveScale) * baseScale;
                     double sy = cy - (v.Y * perspectiveScale) * baseScale;
                     projected[i] = new PointF((float)sx, (float)sy);
-                    vertexDepths[i] = zDist;
                 }
                 else
                 {
                     double sx = cx + v.X * baseScale;
                     double sy = cy - v.Y * baseScale;
                     projected[i] = new PointF((float)sx, (float)sy);
-                    vertexDepths[i] = v.Z;
                 }
+
+                vertexDepths[i] = v.Z;
             }
 
             foreach (var face in poly.Faces)
@@ -107,7 +107,7 @@ namespace PolyhedronLab
                     var midPoint = (startPoint + endPoint) * 0.5;
 
                     var vMid = midPoint.Apply(view);
-                    double depth = PerspectiveMode ? (vMid.Z + cameraDist) : vMid.Z;
+                    double depth = vMid.Z;
 
                     PointF screenStart = ProjectPoint(startPoint, view, cx, cy, baseScale, cameraDist);
                     PointF screenEnd = ProjectPoint(endPoint, view, cx, cy, baseScale, cameraDist);
@@ -142,7 +142,7 @@ namespace PolyhedronLab
             var v = p.Apply(view);
             if (PerspectiveMode)
             {
-                double zDist = v.Z + cameraDist;
+                double zDist = cameraDist - v.Z;
                 if (zDist < 0.1) zDist = 0.1;
                 double perspectiveScale = cameraDist / zDist;
                 return new PointF(
