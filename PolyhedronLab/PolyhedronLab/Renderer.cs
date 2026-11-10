@@ -28,13 +28,19 @@ namespace PolyhedronLab
             double baseScale = 60.0;
             double cameraDist = 15.0;
 
-            // 1. Рисуем координатные оси (они всегда на фоне)
+            // =========================================================================
+            // СИДОРЧИК АЛИСА 
+            // Отрисовка координатных осей (X, Y, Z) на экране.
+            // =========================================================================
             DrawAxes(g, cx, cy, view, Math.Min(cx, cy) * 0.8);
 
-            // 2. Готовим список для сортировки (сюда попадут и грани куба, и кусочки линии)
+            // Очередь отрисовки (сортировка по глубине)
             var renderQueue = new List<(Action<Graphics> drawAction, double depth)>();
 
-            // --- Подготовка граней куба ---
+            // =========================================================================
+            // БОЧАРОВА КАТЕРИНА / ДЕЕВА АЛЕКСАНДРА
+            // Подготовка вершин: проекция с учетом перспективы или аксонометрии.
+            // =========================================================================
             var projected = new PointF[poly.Vertices.Count];
             var vertexDepths = new double[poly.Vertices.Count];
 
@@ -61,6 +67,10 @@ namespace PolyhedronLab
                 vertexDepths[i] = v.Z;
             }
 
+            // =========================================================================
+            // Сбор всех граней многогранника, вычисление их средней глубины
+            // и добавление в очередь отрисовки.
+            // =========================================================================
             foreach (var face in poly.Faces)
             {
                 if (face.Indices.Count < 3) continue;
@@ -72,7 +82,6 @@ namespace PolyhedronLab
                 for (int i = 0; i < face.Indices.Count; i++)
                     pts[i] = projected[face.Indices[i]];
 
-                // Добавляем грань в очередь отрисовки
                 renderQueue.Add((
                     (gfx) =>
                     {
@@ -88,7 +97,9 @@ namespace PolyhedronLab
                 ));
             }
 
-            // --- Подготовка линии (разбиваем на 20 сегментов) ---
+            // =========================================================================
+            // СИДОРЧИК АЛИСА 
+            // =========================================================================
             if (ShowAxisLine)
             {
                 var dir = (AxisPoint2 - AxisPoint1).Normalized();
@@ -112,7 +123,6 @@ namespace PolyhedronLab
                     PointF screenStart = ProjectPoint(startPoint, view, cx, cy, baseScale, cameraDist);
                     PointF screenEnd = ProjectPoint(endPoint, view, cx, cy, baseScale, cameraDist);
 
-                    // Добавляем кусочек линии в очередь
                     renderQueue.Add((
                         (gfx) =>
                         {
@@ -127,10 +137,11 @@ namespace PolyhedronLab
                 }
             }
 
-            // 3. СОРТИРУЕМ ВСЕ (и грани, и линию) ПО ГЛУБИНЕ (от дальних к ближним)
+            // =========================================================================
+            // Сначала рисуем дальние объекты, затем ближние.
+            // =========================================================================
             renderQueue.Sort((a, b) => a.depth.CompareTo(b.depth));
 
-            // 4. Рисуем всё в правильном порядке
             foreach (var item in renderQueue)
             {
                 item.drawAction(g);
