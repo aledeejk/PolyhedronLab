@@ -32,10 +32,7 @@ namespace PolyhedronLab
 
         public static Matrix4x4 ScaleAboutCenter(Point3D c, double k)
         {
-            var t1 = Translate(-c.X, -c.Y, -c.Z); // переносим центр в начало координат
-            var s = Scale(k, k, k); // масштабируем
-            var t2 = Translate(c.X, c.Y, c.Z); // переносим центр в изначальные координаты
-            return t1 * s * t2;
+            return Translate(-c.X, -c.Y, -c.Z) * Scale(k, k, k) * Translate(c.X, c.Y, c.Z);
         }
 
         public static Matrix4x4 RotateX(double deg)
@@ -43,8 +40,7 @@ namespace PolyhedronLab
             double a = deg * Math.PI / 180.0;
             double c = Math.Cos(a), s = Math.Sin(a);
             var m = new Matrix4x4();
-            m.M22 = c; m.M23 = -s;
-            m.M32 = s; m.M33 = c;
+            m.M22 = c; m.M23 = -s; m.M32 = s; m.M33 = c;
             return m;
         }
 
@@ -53,8 +49,7 @@ namespace PolyhedronLab
             double a = deg * Math.PI / 180.0;
             double c = Math.Cos(a), s = Math.Sin(a);
             var m = new Matrix4x4();
-            m.M11 = c; m.M13 = s;
-            m.M31 = -s; m.M33 = c;
+            m.M11 = c; m.M13 = s; m.M31 = -s; m.M33 = c;
             return m;
         }
 
@@ -63,8 +58,7 @@ namespace PolyhedronLab
             double a = deg * Math.PI / 180.0;
             double c = Math.Cos(a), s = Math.Sin(a);
             var m = new Matrix4x4();
-            m.M11 = c; m.M12 = -s;
-            m.M21 = s; m.M22 = c;
+            m.M11 = c; m.M12 = -s; m.M21 = s; m.M22 = c;
             return m;
         }
 
@@ -75,7 +69,6 @@ namespace PolyhedronLab
             double a = deg * Math.PI / 180.0;
             double c = Math.Cos(a), s = Math.Sin(a);
             double t = 1 - c;
-
             var m = new Matrix4x4();
             m.M11 = t * x * x + c;
             m.M12 = t * x * y - s * z;
@@ -92,9 +85,7 @@ namespace PolyhedronLab
         public static Matrix4x4 RotateAroundLine(Point3D p1, Point3D p2, double deg)
         {
             var dir = p2 - p1;
-            return Translate(-p1.X, -p1.Y, -p1.Z)
-                 * RotateAxis(dir, deg)
-                 * Translate(p1.X, p1.Y, p1.Z);
+            return Translate(-p1.X, -p1.Y, -p1.Z) * RotateAxis(dir, deg) * Translate(p1.X, p1.Y, p1.Z);
         }
 
         public static Matrix4x4 ReflectPlane(char plane)
@@ -113,8 +104,7 @@ namespace PolyhedronLab
         public static Matrix4x4 Perspective(double c)
         {
             var m = new Matrix4x4();
-            m.M44 = 1;
-            m.M43 = -1.0 / c;
+            m.M44 = 1; m.M43 = -1.0 / c;
             return m;
         }
 

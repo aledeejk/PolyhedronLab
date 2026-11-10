@@ -52,7 +52,5 @@ namespace PolyhedronLab
             double w = m.M41 * X + m.M42 * Y + m.M43 * Z + m.M44;
             return new[] { x, y, z, w };
         }
-
-        public override string ToString() => $"({X:F2}, {Y:F2}, {Z:F2})";
     }
 }
