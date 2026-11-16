@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace PolyhedronLab
 {
@@ -7,7 +8,6 @@ namespace PolyhedronLab
         public List<Point3D> Vertices { get; } = new List<Point3D>();
         public List<Face> Faces { get; } = new List<Face>();
 
-        // Центр фигуры (используется для масштабирования от центра в ЛАБ6)
         public Point3D Center
         {
             get
@@ -19,30 +19,33 @@ namespace PolyhedronLab
             }
         }
 
-        // Максимальный радиус (используется для настройки камеры и масштаба в ЛАБ7/8)
-        public double MaxRadius
-        {
-            get
-            {
-                if (Vertices.Count == 0) return 1;
-                var c = Center;
-                double r = 0;
-                foreach (var v in Vertices)
-                {
-                    double d = (v - c).Length;
-                    if (d > r) r = d;
-                }
-                return r < 1e-9 ? 1 : r;
-            }
-        }
-
-        // Применение матрицы (общий метод для всех аффинных преобразований)
         public Polyhedron Transformed(Matrix4x4 m)
         {
             var copy = new Polyhedron();
             foreach (var v in Vertices) copy.Vertices.Add(v.Apply(m));
             foreach (var f in Faces) copy.Faces.Add(new Face(f.Indices));
             return copy;
+        }
+
+        /// <summary>
+        /// Возвращает нормаль к каждой вершине: усреднение нормалей смежных граней.
+        /// </summary>
+        public List<Point3D> ComputeVertexNormals()
+        {
+            var normals = new List<Point3D>(new Point3D[Vertices.Count]);
+            foreach (var face in Faces)
+            {
+                if (face.Indices.Count < 3) continue;
+                var p0 = Vertices[face.Indices[0]];
+                var p1 = Vertices[face.Indices[1]];
+                var p2 = Vertices[face.Indices[2]];
+                var fn = Point3D.Cross(p1 - p0, p2 - p0).Normalized();
+                foreach (var idx in face.Indices)
+                    normals[idx] = normals[idx] + fn;
+            }
+            for (int i = 0; i < normals.Count; i++)
+                normals[i] = normals[i].Normalized();
+            return normals;
         }
     }
 }

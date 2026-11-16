@@ -12,60 +12,30 @@ namespace PolyhedronLab
         public Matrix4x4() { M11 = M22 = M33 = M44 = 1.0; }
         public static Matrix4x4 Identity() => new Matrix4x4();
 
-        // ==========================================================
-        // ЛАБ6 - БОЧАРОВА КАТЕРИНА 
-        // (Смещение, масштаб, базовые повороты)
-        // ==========================================================
         public static Matrix4x4 Translate(double dx, double dy, double dz)
-        {
-            var m = new Matrix4x4();
-            m.M14 = dx; m.M24 = dy; m.M34 = dz;
-            return m;
-        }
+        { var m = new Matrix4x4(); m.M14 = dx; m.M24 = dy; m.M34 = dz; return m; }
 
         public static Matrix4x4 Scale(double sx, double sy, double sz)
-        {
-            var m = new Matrix4x4();
-            m.M11 = sx; m.M22 = sy; m.M33 = sz;
-            return m;
-        }
+        { var m = new Matrix4x4(); m.M11 = sx; m.M22 = sy; m.M33 = sz; return m; }
 
         public static Matrix4x4 ScaleAboutCenter(Point3D c, double k)
-        {
-            return Translate(-c.X, -c.Y, -c.Z) * Scale(k, k, k) * Translate(c.X, c.Y, c.Z);
-        }
+            => Translate(-c.X, -c.Y, -c.Z) * Scale(k, k, k) * Translate(c.X, c.Y, c.Z);
 
         public static Matrix4x4 RotateX(double deg)
         {
-            double a = deg * Math.PI / 180.0;
-            double c = Math.Cos(a), s = Math.Sin(a);
-            var m = new Matrix4x4();
-            m.M22 = c; m.M23 = -s; m.M32 = s; m.M33 = c;
-            return m;
+            double a = deg * Math.PI / 180.0, c = Math.Cos(a), s = Math.Sin(a);
+            var m = new Matrix4x4(); m.M22 = c; m.M23 = -s; m.M32 = s; m.M33 = c; return m;
         }
-
         public static Matrix4x4 RotateY(double deg)
         {
-            double a = deg * Math.PI / 180.0;
-            double c = Math.Cos(a), s = Math.Sin(a);
-            var m = new Matrix4x4();
-            m.M11 = c; m.M13 = s; m.M31 = -s; m.M33 = c;
-            return m;
+            double a = deg * Math.PI / 180.0, c = Math.Cos(a), s = Math.Sin(a);
+            var m = new Matrix4x4(); m.M11 = c; m.M13 = s; m.M31 = -s; m.M33 = c; return m;
         }
-
         public static Matrix4x4 RotateZ(double deg)
         {
-            double a = deg * Math.PI / 180.0;
-            double c = Math.Cos(a), s = Math.Sin(a);
-            var m = new Matrix4x4();
-            m.M11 = c; m.M12 = -s; m.M21 = s; m.M22 = c;
-            return m;
+            double a = deg * Math.PI / 180.0, c = Math.Cos(a), s = Math.Sin(a);
+            var m = new Matrix4x4(); m.M11 = c; m.M12 = -s; m.M21 = s; m.M22 = c; return m;
         }
-
-        // ==========================================================
-        // ЛАБ6 - ДЕЕВА АЛЕКСАНДРА 
-        // (Отражение)
-        // ==========================================================
         public static Matrix4x4 ReflectPlane(char plane)
         {
             var m = new Matrix4x4();
@@ -78,47 +48,23 @@ namespace PolyhedronLab
             }
             return m;
         }
-
-        // ==========================================================
-        // ЛАБ6 - СИДОРЧИК АЛИСА 
-        // (Произвольная ось, поворот вокруг прямой, перспектива)
-        // ==========================================================
         public static Matrix4x4 RotateAxis(Point3D axis, double deg)
         {
             var u = axis.Normalized();
             double x = u.X, y = u.Y, z = u.Z;
-            double a = deg * Math.PI / 180.0;
-            double c = Math.Cos(a), s = Math.Sin(a);
-            double t = 1 - c;
+            double a = deg * Math.PI / 180.0, c = Math.Cos(a), s = Math.Sin(a), t = 1 - c;
             var m = new Matrix4x4();
-            m.M11 = t * x * x + c;
-            m.M12 = t * x * y - s * z;
-            m.M13 = t * x * z + s * y;
-            m.M21 = t * x * y + s * z;
-            m.M22 = t * y * y + c;
-            m.M23 = t * y * z - s * x;
-            m.M31 = t * x * z - s * y;
-            m.M32 = t * y * z + s * x;
-            m.M33 = t * z * z + c;
+            m.M11 = t * x * x + c; m.M12 = t * x * y - s * z; m.M13 = t * x * z + s * y;
+            m.M21 = t * x * y + s * z; m.M22 = t * y * y + c; m.M23 = t * y * z - s * x;
+            m.M31 = t * x * z - s * y; m.M32 = t * y * z + s * x; m.M33 = t * z * z + c;
             return m;
         }
-
         public static Matrix4x4 RotateAroundLine(Point3D p1, Point3D p2, double deg)
-        {
-            var dir = p2 - p1;
-            return Translate(-p1.X, -p1.Y, -p1.Z) * RotateAxis(dir, deg) * Translate(p1.X, p1.Y, p1.Z);
-        }
+            => Translate(-p1.X, -p1.Y, -p1.Z) * RotateAxis(p2 - p1, deg) * Translate(p1.X, p1.Y, p1.Z);
 
         public static Matrix4x4 Perspective(double c)
-        {
-            var m = new Matrix4x4();
-            m.M44 = 1; m.M43 = -1.0 / c;
-            return m;
-        }
+        { var m = new Matrix4x4(); m.M44 = 1; m.M43 = -1.0 / c; return m; }
 
-        // ==========================================================
-        // ОБЩИЙ БЛОК (Перемножение матриц)
-        // ==========================================================
         public static Matrix4x4 operator *(Matrix4x4 a, Matrix4x4 b)
         {
             var r = new Matrix4x4();
